@@ -123,7 +123,8 @@ end)
 
 
 local function getAccountTier(player)
-    return 99
+    if player == lplr then return 99 end
+    return 0
 end  
 for _, v in vape.Modules do
 	if v.Category == 'Combat' or v.Category == 'Render' then
