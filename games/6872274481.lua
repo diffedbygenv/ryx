@@ -1,10 +1,54 @@
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
-local run = function(func)
-    local ok, err = pcall(func)
-    if not ok then
-        warn('[SKIDV7] module failed to load: ' .. tostring(err))
-    end
-end
+pcall(function()
+	local l = Instance.new("ScreenGui")
+	l.Name = "VapeLoading"
+	l.ResetOnSpawn = false
+	l.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	local f = Instance.new("Frame")
+	f.Size = UDim2.new(1, 0, 1, 0)
+	f.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+	f.BackgroundTransparency = 1
+	local t = Instance.new("TextLabel")
+	t.Size = UDim2.new(1, 0, 0, 50)
+	t.Position = UDim2.new(0, 0, 0.5, -25)
+	t.BackgroundTransparency = 1
+	t.Text = "Loading Fuzzynuts..."
+	t.TextColor3 = Color3.fromRGB(200, 200, 200)
+	t.TextScaled = true
+	t.Font = Enum.Font.SourceSansBold
+	t.Parent = f
+	local p = Instance.new("Frame")
+	p.Size = UDim2.new(0.5, 0, 0, 6)
+	p.Position = UDim2.new(0.25, 0, 0.5, 30)
+	p.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	p.BorderSizePixel = 0
+	local bar = Instance.new("Frame")
+	bar.Size = UDim2.new(0, 0, 1, 0)
+	bar.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+	bar.BorderSizePixel = 0
+	bar.Name = "Bar"
+	bar.Parent = p
+	p.Parent = f
+	f.Parent = l
+	l.Parent = game:GetService("CoreGui")
+	loadCount = 0
+	totalRuns = 200
+	run = function(func)
+		loadCount = loadCount + 1
+		if loadCount % 5 == 0 then
+			local pct = math.floor(loadCount / totalRuns * 100)
+			if pct <= 100 then
+				bar.Size = UDim2.new(pct / 100, 0, 1, 0)
+				t.Text = "Loading Fuzzynuts... " .. tostring(pct) .. "%"
+			end
+		end
+		local ok, err = pcall(func)
+		if not ok then
+			warn('[SKIDV7] module failed to load: ' .. tostring(err))
+		end
+	end
+end)
+
 local vapeEvents = setmetatable({}, {
 	__index = function(self, index)
 		self[index] = Instance.new('BindableEvent')
@@ -33514,7 +33558,7 @@ run(function()
 				playerData = {}
 			end
 		end,
-		Tooltip = 'script made by Kolifyz'
+		Tooltip = 'Made by atrecus'
 	})
 
 	ChopModifier = AnimChopper:CreateSlider({
@@ -35522,4 +35566,38 @@ run(function()
 		Visible = true,
 		Tooltip = "Makes you TP whenever you win/lose a match causing you to reset the history"
 	})
+end)
+
+pcall(function()
+	local gui = game:GetService("CoreGui"):FindFirstChild("VapeLoading")
+	if gui then gui:Destroy() end
+end)
+task.spawn(function()
+	if not inputService.TouchEnabled then return end
+	task.wait(2)
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "VapeMobileToggle"
+	gui.ResetOnSpawn = false
+	gui.Parent = lplr and lplr.PlayerGui or game:GetService("CoreGui")
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(0, 50, 0, 50)
+	btn.Position = UDim2.new(0, 15, 0.5, -25)
+	btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	btn.BackgroundTransparency = 0.3
+	btn.BorderSizePixel = 0
+	btn.Text = "V"
+	btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+	btn.TextScaled = true
+	btn.Font = Enum.Font.SourceSansBold
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 10)
+	c.Parent = btn
+	btn.MouseButton1Click:Connect(function()
+		local vg = vape and vape.gui and vape.gui.ScaledGui and vape.gui.ScaledGui.ClickGui
+		if vg then
+			vg.Visible = not vg.Visible
+			btn.Text = vg.Visible and "V" or "X"
+		end
+	end)
+	gui.ChildRemoved:Connect(function() btn = nil; gui = nil end)
 end)
