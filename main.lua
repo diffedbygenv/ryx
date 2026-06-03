@@ -13,6 +13,8 @@ elseif getgenv().Closet == nil then
 	getgenv().Closet = false
 end
 
+getgenv().isSkidPaid = true
+
 local _realLoadstring = clonefunction(loadstring)
 local vape
 local loadstring = function(...)
@@ -180,7 +182,6 @@ if not isfolder('newvape/assets/' .. gui) then
 	makefolder('newvape/assets/' .. gui)
 end
 
--- Download assets for all GUI themes
 for _, name in ipairs(ASSETS_NEW) do pcall(downloadFile, 'newvape/assets/new/' .. name) end
 for _, name in ipairs(ASSETS_OLD) do pcall(downloadFile, 'newvape/assets/old/' .. name) end
 for _, name in ipairs(ASSETS_RISE) do pcall(downloadFile, 'newvape/assets/rise/' .. name) end
