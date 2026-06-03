@@ -32,6 +32,6 @@ for _, item in ipairs(listfiles(folderToClean)) do
     end
 end
 
-print("loading skidv7...")
-task.wait(1) --no no crash dabo
+print("loading Fuzzynuts...")
+task.wait(1)
 loadstring(game:HttpGet(reinstallUrl, true))()
