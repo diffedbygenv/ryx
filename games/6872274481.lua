@@ -16397,14 +16397,82 @@ run(function()
 end)
 
 run(function()
-    HitFix = vape.Categories.Legit:CreateModule({
+    local HitFix
+	local PingBased
+	local Options
+    HitFix = vape.Categories.Blatant:CreateModule({
         Name = 'HitFix',
-		Function = function(callback)
-			debug.setconstant(bedwars.SwordController.swingSwordAtMouse, 23, callback and 'raycast' or 'Raycast')
-			debug.setupvalue(bedwars.SwordController.swingSwordAtMouse, 4, callback and bedwars.QueryUtil or workspace)
-		end,
-		Tooltip = 'Changes the raycast function to the correct one'
-	})
+        Function = function(callback)
+
+            local function getPing()
+                local stats = cloneref(game:GetService("Stats"))
+                local ping = stats.Network.ServerStatsItem["Data Ping"]:GetValueString()
+                return tonumber(ping:match("%d+")) or 50
+            end
+
+            local function getDelay()
+                local ping = getPing()
+
+                if PingBased.Enabled then
+                    if Options.Value == "Blatant" then
+                        return math.clamp(0.06 + (ping / 1000), 0.06, 0.12)
+                    else
+                        return math.clamp(0.13 + (ping / 1200), 0.13, 0.18)
+                    end
+                end
+
+                return Options.Value == "Blatant" and 0.05 or 0.15
+            end
+
+            if callback then
+                pcall(function()
+                    if bedwars.SwordController and bedwars.SwordController.swingSwordAtMouse then
+                        local func = bedwars.SwordController.swingSwordAtMouse
+
+                        if Options.Value == "Blatant" then
+                            debug.setconstant(func, 23, "raycast")
+                            debug.setupvalue(func, 4, bedwars.QueryUtil)
+                        end
+
+                        for i, v in ipairs(debug.getconstants(func)) do
+                            if typeof(v) == "number" and (v == 28) then
+                                debug.setconstant(func, i, getDelay())
+                            end
+                        end
+                    end
+                end)
+            else
+                pcall(function()
+                    if bedwars.SwordController and bedwars.SwordController.swingSwordAtMouse then
+                        local func = bedwars.SwordController.swingSwordAtMouse
+
+                        debug.setconstant(func, 23, "Raycast")
+                        debug.setupvalue(func, 4, workspace)
+
+                        for i, v in ipairs(debug.getconstants(func)) do
+                            if typeof(v) == "number" then
+                                if v < 0.15 then
+                                    debug.setconstant(func, i, 0.15)
+                                end
+                            end
+                        end
+                    end
+                end)
+            end
+        end,
+        Tooltip = 'Improves hit registration and decreases the chances of a ghost hit'
+    })
+
+    Options = HitFix:CreateDropdown({
+        Name = "Mode",
+        List = {"Blatant", "Legit"},
+    })
+
+    PingBased = HitFix:CreateToggle({
+        Name = "Ping Based",
+        Default = false,
+		Visible = true,
+    })
 end)
 
 run(function()
