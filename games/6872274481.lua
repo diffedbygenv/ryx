@@ -35420,7 +35420,7 @@ run(function()
 
 	AutoVulcan = vape.Categories.Kits:CreateModule({
 		Name = 'Auto Vulcan',
-		Tooltip = 'All turrets auto aim',
+		Tooltip = 'All turrets auto aim and fire. 360 FOV, through walls.',
 		Function = function(callback)
 			if callback then
 				AutoVulcan:Clean(task.spawn(function()
@@ -35477,5 +35477,49 @@ run(function()
 		Name = 'Prediction',
 		Default = true,
 		Tooltip = 'Predicts target movement.',
+	})
+end)
+
+run(function()
+	local AEGT
+	local E
+
+	local function Reset()
+		if #playersService:GetChildren() == 1 then return end
+		local TeleportService = game:GetService("TeleportService")
+		local data = TeleportService:GetLocalPlayerTeleportData()
+		AEGT:Clean(TeleportService:Teleport(game.PlaceId, lplr, data))
+	end
+
+	AEGT = vape.Categories.AltFarm:CreateModule({
+		Name = 'AutoEmptyGameTP',
+		Function = function(callback)
+			if callback then
+				if E.Enabled then
+					AEGT:Clean(vapeEvents.EntityDeathEvent.Event:Connect(function(deathTable)
+						if deathTable.finalKill and deathTable.entityInstance == lplr.Character and isEveryoneDead() and store.matchState ~= 2 then
+							Reset()
+						end
+					end))
+					AEGT:Clean(vapeEvents.MatchEndEvent.Event:Connect(Reset))
+				else
+					if #playersService:GetChildren() > 1 then
+						vape:CreateNotification("AutoEmptyGameTP", "Teleporting to Empty Game!", 6)
+						task.wait((6 / 3.335))
+						Reset()
+					end
+				end
+			else
+				return
+			end
+		end,
+		Tooltip = 'Makes you automatically TP to a empty game'
+	})
+
+	E = AEGT:CreateToggle({
+		Name = "Game Ended",
+		Default = true,
+		Visible = true,
+		Tooltip = "Makes you TP whenever you win/lose a match causing you to reset the history"
 	})
 end)
