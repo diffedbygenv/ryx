@@ -1,60 +1,55 @@
-local _args = ...
+local j1l1jil1i=Path2DControlPoint.new(UDim2.new(0,0,0,0))
+repeat task.wait() until game:IsLoaded()
+if shared.vape then shared.vape:Uninject() end
 
-local FuzzynutsErrorHandler = function(err)
-	warn('═══════════════════════════════════════════')
-	warn('  FUZZYNUTS ADVANCED ERROR HANDLER')
-	warn('═══════════════════════════════════════════')
-	warn('  Message: ' .. tostring(err))
-	local trace = debug and debug.traceback and debug.traceback()
-	if trace then
-		warn('  Traceback:')
-		for line in trace:gmatch('[^\r\n]+') do
-			warn('    ' .. line)
-		end
-	end
-	warn('═══════════════════════════════════════════')
+local args = ...
+if type(args) == "table" and args.Username then
+	shared.ValidatedUsername = args.Username
 end
 
-local function fileExists(file)
-	local suc, res = pcall(function()
-		return readfile(file)
-	end)
+if type(args) == "table" and args.Closet then
+	getgenv().Closet = true
+elseif getgenv().Closet == nil then
+	getgenv().Closet = false
+end
+
+local _realLoadstring = clonefunction(loadstring)
+local vape
+local loadstring = function(...)
+	local res, err = _realLoadstring(...)
+	if err and vape then
+		vape:CreateNotification('Fuzzynuts', 'Failed to load : '..err, 30, 'alert')
+	end
+	return res
+end
+
+local queue_on_teleport = queue_on_teleport or function() end
+local isfile = isfile or function(file)
+	local suc, res = pcall(function() return readfile(file) end)
 	return suc and res ~= nil and res ~= ''
 end
-isfile = fileExists
-
-local builtinDel = delfile
-local function deleteFile(file)
-	if builtinDel then
-		local suc = pcall(builtinDel, file)
-		if suc then return end
-	end
-	pcall(function()
-		writefile(file, '')
-	end)
-end
-delfile = deleteFile
-
-local function HTTP(url, nocache)
-	return game:HttpGet(url, nocache)
-end
-local function JSON(data)
-	return game:GetService('HttpService'):JSONDecode(data)
-end
+local delfile = delfile or function(file) writefile(file, '') end
+local cloneref = cloneref or function(obj) return obj end
+local playersService = cloneref(game:GetService('Players'))
+local httpService = cloneref(game:GetService('HttpService'))
 
 local function downloadFile(path, func)
 	if not isfile(path) then
-		local commitHash = ''
-		if fileExists('newvape/profiles/commit.txt') then
-			commitHash = readfile('newvape/profiles/commit.txt')
+		local res
+		local success = false
+		for attempt = 1, 3 do
+			local suc, result = pcall(function()
+				return game:HttpGet('https://raw.githubusercontent.com/toodiesjamming-stack/Fuzzynuts/' .. readfile('newvape/profiles/commit.txt') .. '/' .. select(1, path:gsub('newvape/', '')), true)
+			end)
+			if suc and result ~= '404: Not Found' then
+				res = result
+				success = true
+				break
+			end
+			task.wait(1)
 		end
-		local relativePath = select(1, path:gsub('newvape/', ''))
-		local url = 'https://raw.githubusercontent.com/toodiesjamming-stack/Fuzzynuts/' .. commitHash .. '/' .. relativePath
-		local suc, res = pcall(function()
-			return HTTP(url, true)
-		end)
-		if not suc or res == '404: Not Found' then
-			error(res)
+		if not success then
+			error('Failed to download ' .. path .. ' after 3 attempts')
 		end
 		if path:find('.lua') then
 			res = '--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.\n' .. res
@@ -64,85 +59,81 @@ local function downloadFile(path, func)
 	return (func or readfile)(path)
 end
 
-local function wipeFolder(path)
-	if not isfolder(path) then return end
-	local ok, files = pcall(listfiles, path)
-	if not ok or type(files) ~= 'table' then return end
-	for _, file in ipairs(files) do
-		if file:find('loader') then continue end
-		if fileExists(file) then
-			local content = readfile(file)
-			if content and content:find('This watermark is used to delete the file', 1, true) == 1 then
-				deleteFile(file)
+local function migrateProfiles()
+	if isfile('newvape/profiles/migrated_placeid.txt') then return end
+	local oldId = tostring(game.GameId)
+	local newId = tostring(game.PlaceId)
+	if oldId == newId then
+		pcall(writefile, 'newvape/profiles/migrated_placeid.txt', 'done')
+		return
+	end
+	local suffix = oldId .. '.txt'
+	for _, path in ipairs(listfiles('newvape/profiles')) do
+		local name = path:gsub('\\', '/')
+		if name:sub(-#suffix) == suffix then
+			local newPath = name:sub(1, -#suffix - 1) .. newId .. '.txt'
+			if not isfile(newPath) then
+				pcall(function() writefile(newPath, readfile(path)) end)
 			end
 		end
 	end
-end
-
-for _, folder in ipairs({
-	'newvape', 'newvape/games', 'newvape/profiles', 'newvape/profiles/premade',
-	'newvape/assets', 'newvape/assets/rise', 'newvape/assets/new',
-	'newvape/assets/old', 'newvape/assets/wurst',
-	'newvape/libraries', 'newvape/guis'
-}) do
-	if not isfolder(folder) then
-		makefolder(folder)
-	end
-end
-
-local function downloadPremadeProfiles(commit)
 	if isfolder('newvape/profiles/premade') then
-		for _, file in listfiles('newvape/profiles/premade') do
-			pcall(function()
-				if isfile(file) then
-					delfile(file)
-				end
-			end)
-		end
-	else
-		makefolder('newvape/profiles/premade')
-	end
-
-	local success, response = pcall(function()
-		return HTTP('https://api.github.com/repos/toodiesjamming-stack/Fuzzynuts/contents/profiles/premade?ref=' .. commit)
-	end)
-
-	if success and response then
-		local ok, files = pcall(function()
-			return JSON(response)
-		end)
-
-		if ok and type(files) == 'table' then
-			for _, file in pairs(files) do
-				if file.name and file.name:find('.txt') and file.name ~= 'commit.txt' then
-					local baseName = (file.name:match('^(.-)%.txt$') or file.name):gsub('%d+$', '')
-					local fileId = (game.GameId == 2619619496) and game.GameId or game.PlaceId
-					local filePath = 'newvape/profiles/premade/' .. baseName .. tostring(fileId) .. '.txt'
-					local ds, dc = pcall(function()
-						return HTTP(file.download_url, true)
-					end)
-					if ds and dc and dc ~= '404: Not Found' then
-						writefile(filePath, dc)
-					end
+		for _, path in ipairs(listfiles('newvape/profiles/premade')) do
+			local name = path:gsub('\\', '/')
+			if name:sub(-#suffix) == suffix then
+				local newPath = name:sub(1, -#suffix - 1) .. newId .. '.txt'
+				if not isfile(newPath) then
+					pcall(function() writefile(newPath, readfile(path)) end)
 				end
 			end
 		end
 	end
+	pcall(writefile, 'newvape/profiles/migrated_placeid.txt', 'done')
 end
+pcall(migrateProfiles)
 
-local LIBRARY_FILES = {
-	'drawing.lua', 'entity.lua', 'hash.lua', 'performance.lua',
-	'prediction.lua', 'utils.lua', 'vm.lua', 'XFunctions.lua'
-}
-
-local GUI_FILES = {
-	'new.lua', 'old.lua', 'rise.lua', 'wurst.lua'
-}
-
-local ASSETS_RISE = {
-	'productsans.json', 'Icon-3.ttf', 'Icon-1.ttf', 'slice.png',
-	'SF-Pro-Rounded-Regular.otf', 'SF-Pro-Rounded-Medium.otf', 'SF-Pro-Rounded-Light.otf'
-}
+local function finishLoading()
+	vape.Init = nil
+	if not vape.Load then
+		warn('[Fuzzynuts] vape.Load is nil skipping load')
+		return
+	end
+	vape:Load()
+	vape:Clean(task.spawn(function()
+		repeat
+			pcall(vape.Save, vape)
+			task.wait(10)
+		until vape.Loaded == nil
+	end))
+	local teleportedServers
+	vape:Clean(playersService.LocalPlayer.OnTeleport:Connect(function()
+		if (not teleportedServers) and (not shared.VapeIndependent) then
+			teleportedServers = true
+			local teleportScript = [[
+				loadstring(game:HttpGet('https://raw.githubusercontent.com/toodiesjamming-stack/Fuzzynuts/'..readfile('newvape/profiles/commit.txt')..'/loader.lua', true), 'loader')()
+			]]
+			if shared.VapeDeveloper then
+				teleportScript = 'shared.VapeDeveloper = true\n' .. teleportScript
+			end
+			if shared.VapeCustomProfile then
+				teleportScript = 'shared.VapeCustomProfile = "' .. shared.VapeCustomProfile .. '"\n' .. teleportScript
+			end
+			if shared.ValidatedUsername then
+				teleportScript = 'shared.ValidatedUsername = "' .. shared.ValidatedUsername .. '"\n' .. teleportScript
+			end
+			local _ok, _err = pcall(function() vape:Save() end)
+			if not _ok then warn('[Fuzzynuts] save failed before teleport: ' .. tostring(_err)) toclipboard(_err) end
+			queue_on_teleport(teleportScript)
+		end
+	end))
+	if not shared.vapereload then
+		if not vape.Categories then return end
+		if vape.Categories.Main.Options['GUI bind indicator'].Enabled then
+			local name = shared.ValidatedUsername and ('wsg, ' .. shared.ValidatedUsername .. ' :D ') or 'welcome '
+			vape:CreateNotification('[Fuzzynuts] Finished Loading', name .. (vape.VapeButton and 'Press the button in the top right to open GUI' or 'Press ' .. table.concat(vape.Keybind, ' + '):upper() .. ' to open GUI'), 5)
+		end
+	end
+end
 
 local ASSETS_NEW = {
 	'blockedtab.png', 'blockedicon.png', 'blatanticon.png',
@@ -165,7 +156,6 @@ local ASSETS_NEW = {
 	'friendstab.png', 'expandup.png', 'expandright.png',
 	'guiicon.png', 'settingsicon.png', 'checkbox.png', 'barlogo.png'
 }
-
 local ASSETS_OLD = {
 	'worldicon.png', 'utilityicon.png', 'textvape.png', 'textv4.png',
 	'textguiicon.png', 'targetinfoicon.png', 'settingsicon.png',
@@ -173,162 +163,96 @@ local ASSETS_OLD = {
 	'info.png', 'guiicon.png', 'friendsicon.png', 'combaticon.png',
 	'checkbox.png', 'blatanticon.png', 'barlogo.png'
 }
-
+local ASSETS_RISE = {
+	'productsans.json', 'Icon-3.ttf', 'Icon-1.ttf', 'slice.png',
+	'SF-Pro-Rounded-Regular.otf', 'SF-Pro-Rounded-Medium.otf', 'SF-Pro-Rounded-Light.otf'
+}
 local ASSETS_WURST = {
 	'wurst_128.png', 'triangle.png'
 }
 
-local function downloadAllModules(commit)
-	for _, file in ipairs(LIBRARY_FILES) do
-		pcall(downloadFile, 'newvape/libraries/' .. file)
+if not isfile('newvape/profiles/gui.txt') then
+	writefile('newvape/profiles/gui.txt', 'new')
+end
+local gui = readfile('newvape/profiles/gui.txt')
+
+if not isfolder('newvape/assets/' .. gui) then
+	makefolder('newvape/assets/' .. gui)
+end
+
+-- Download assets for all GUI themes
+for _, name in ipairs(ASSETS_NEW) do pcall(downloadFile, 'newvape/assets/new/' .. name) end
+for _, name in ipairs(ASSETS_OLD) do pcall(downloadFile, 'newvape/assets/old/' .. name) end
+for _, name in ipairs(ASSETS_RISE) do pcall(downloadFile, 'newvape/assets/rise/' .. name) end
+for _, name in ipairs(ASSETS_WURST) do pcall(downloadFile, 'newvape/assets/wurst/' .. name) end
+
+local guiSource = downloadFile('newvape/guis/' .. gui .. '.lua')
+local guiFunc, guiErr = _realLoadstring(guiSource, 'gui')
+if not guiFunc then
+	local errMsg = tostring(guiErr)
+	local lineNum = errMsg:match(':(%d+):')
+	local context = ''
+	if lineNum then
+		local n = tonumber(lineNum)
+		local lines = guiSource:split('\n')
+		local from = math.max(1, n - 2)
+		local to   = math.min(#lines, n + 2)
+		local parts = {}
+		for i = from, to do
+			local marker = i == n and '>>> ' or '    '
+			table.insert(parts, marker .. i .. ': ' .. (lines[i] or ''))
+		end
+		context = '\n\nContext:\n' .. table.concat(parts, '\n')
 	end
+	error('[Fuzzynuts] syntax error in ' .. gui .. '.lua' .. '\n' .. errMsg .. context)
+end
+vape = guiFunc()
+if not vape then
+	error('[Fuzzynuts] GUI returned nil file may be corrupted try deleting newvape/guis/' .. gui .. '.lua and reinjecting.')
+end
+if not vape.Load then
+	if delfile then pcall(function() delfile('newvape/guis/' .. gui .. '.lua') end) end
+	error('[Fuzzynuts] gui file corrupted (missing load) reinject..')
+end
+shared.vape = vape
+task.wait(0.1)
 
-	for _, file in ipairs(GUI_FILES) do
-		pcall(downloadFile, 'newvape/guis/' .. file)
+if getgenv().Closet then
+	local LogService = cloneref(game:GetService('LogService'))
+	local originals = {}
+	local function hook(funcName)
+		if typeof(getgenv()[funcName]) == 'function' then
+			local original = hookfunction(getgenv()[funcName], function() end)
+			originals[funcName] = original
+		end
 	end
+	hook('print')
+	hook('warn')
+	hook('error')
+	hook('info')
+	pcall(function() LogService:ClearOutput() end)
+	local conn = LogService.MessageOut:Connect(function() LogService:ClearOutput() end)
+	getgenv()._vape_log_connection = conn
+	getgenv()._vape_originals = originals
+end
 
-	for _, file in ipairs(ASSETS_RISE) do
-		pcall(downloadFile, 'newvape/assets/rise/' .. file)
-	end
-
-	for _, file in ipairs(ASSETS_NEW) do
-		pcall(downloadFile, 'newvape/assets/new/' .. file)
-	end
-
-	for _, file in ipairs(ASSETS_OLD) do
-		pcall(downloadFile, 'newvape/assets/old/' .. file)
-	end
-
-	for _, file in ipairs(ASSETS_WURST) do
-		pcall(downloadFile, 'newvape/assets/wurst/' .. file)
-	end
-
-	local success, response = pcall(function()
-		return HTTP('https://api.github.com/repos/toodiesjamming-stack/Fuzzynuts/contents/games?ref=' .. commit)
-	end)
-
-	local gameFiles = {}
-	if success and response then
-		local ok, files = pcall(function()
-			return JSON(response)
-		end)
-		if ok and type(files) == 'table' then
-			for _, file in pairs(files) do
-				if file.type == 'file' and file.name:match('%.lua$') then
-					table.insert(gameFiles, file.name)
-				end
+if not shared.VapeIndependent then
+	_realLoadstring(downloadFile('newvape/games/universal.lua'), 'universal')()
+	local gameFileId = (game.GameId == 2619619496) and (game.PlaceId == 6872265039 and 6872265039 or 6872274481) or game.PlaceId
+	if isfile('newvape/games/' .. gameFileId .. '.lua') then
+		_realLoadstring(downloadFile('newvape/games/' .. gameFileId .. '.lua'), tostring(gameFileId))(...)
+	else
+		if not shared.VapeDeveloper then
+			local suc, res = pcall(function()
+				return game:HttpGet('https://raw.githubusercontent.com/toodiesjamming-stack/Fuzzynuts/' .. readfile('newvape/profiles/commit.txt') .. '/games/' .. gameFileId .. '.lua', true)
+			end)
+			if suc and res ~= '404: Not Found' then
+				_realLoadstring(downloadFile('newvape/games/' .. gameFileId .. '.lua'), tostring(gameFileId))(...)
 			end
 		end
 	end
-
-	if #gameFiles == 0 then
-		table.insert(gameFiles, 'universal.lua')
-	end
-
-	for _, fileName in ipairs(gameFiles) do
-		pcall(downloadFile, 'newvape/games/' .. fileName)
-	end
-
-	-- Always re-download main.lua to get latest auto-load code
-	if fileExists('newvape/main.lua') then
-		deleteFile('newvape/main.lua')
-	end
-	pcall(downloadFile, 'newvape/main.lua')
+	finishLoading()
+else
+	vape.Init = finishLoading
+	return vape
 end
-
-if not shared.VapeDeveloper then
-	local commit = 'main'
-	local ok, res = pcall(function()
-		return HTTP('https://api.github.com/repos/toodiesjamming-stack/Fuzzynuts/commits/main', true)
-	end)
-
-	if ok and res then
-		local h = res:match('"sha":"([a-f0-9]+)"')
-		if h and #h == 40 then
-			commit = h
-		end
-	end
-
-	if commit ~= 'main' and (fileExists('newvape/profiles/commit.txt') and readfile('newvape/profiles/commit.txt') or '') ~= commit then
-		wipeFolder('newvape')
-		wipeFolder('newvape/games')
-		wipeFolder('newvape/guis')
-		pcall(function()
-			if fileExists('newvape/guis/new.lua') then
-				deleteFile('newvape/guis/new.lua')
-			end
-		end)
-		wipeFolder('newvape/libraries')
-		if isfolder('newvape/profiles/premade') then
-			local ok2, premadeFiles = pcall(listfiles, 'newvape/profiles/premade')
-			if ok2 and type(premadeFiles) == 'table' then
-				for _, pf in ipairs(premadeFiles) do
-					pcall(function()
-						if isfile(pf) then
-							deleteFile(pf)
-						end
-					end)
-				end
-			end
-		end
-	end
-
-	writefile('newvape/profiles/commit.txt', commit)
-
-	downloadAllModules(commit)
-	pcall(downloadPremadeProfiles, commit)
-end
-
-local guiPriority = {'new', 'rise', 'wurst', 'old'}
-local mainapi
-for _, guiName in ipairs(guiPriority) do
-	local guiPath = 'newvape/guis/' .. guiName .. '.lua'
-	if fileExists(guiPath) then
-		local success, result = pcall(loadstring(readfile(guiPath), guiName), {
-			Username = shared.ValidatedUsername or 'User'
-		})
-		if success and type(result) == 'table' then
-			mainapi = result
-			shared.vape = mainapi
-			shared.vape_running = true
-			break
-		else
-			warn('[Fuzzynuts Error Handler] Failed to load GUI "' .. guiName .. '": ' .. tostring(result))
-		end
-	end
-end
-
-if not mainapi then
-	error('[Fuzzynuts Error Handler] No GUI files were downloaded successfully. Check your internet connection.')
-end
-
--- Auto-load game config
-local function loadGameConfig()
-	local placeId = tostring(game.PlaceId)
-	local gamePath = 'newvape/games/' .. placeId .. '.lua'
-	if not fileExists(gamePath) then
-		gamePath = 'newvape/games/universal.lua'
-	end
-	if fileExists(gamePath) then
-		local suc, result = pcall(loadstring(readfile(gamePath), placeId))
-		if not suc then
-			warn('[Fuzzynuts] Game config error: ' .. tostring(result))
-		end
-	end
-end
-
-loadGameConfig()
-
--- Re-load game config when PlaceId changes (e.g. lobby -> match)
-task.spawn(function()
-	local lastPlaceId = game.PlaceId
-	while task.wait(1) do
-		if game.PlaceId ~= lastPlaceId then
-			lastPlaceId = game.PlaceId
-			task.wait(2)
-			loadGameConfig()
-		end
-	end
-end)
-
-return mainapi
