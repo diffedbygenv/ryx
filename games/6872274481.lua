@@ -34843,7 +34843,7 @@ run(function()
 		AEGT:Clean(TeleportService:Teleport(game.PlaceId, lplr, data))
 	end
 
-	AEGT = vape.Categories.Blatant:CreateModule({
+	AEGT = vape.Categories.AltFarm:CreateModule({
 		Name = 'AutoEmptyGameTP',
 		Function = function(callback)
 			if callback then
