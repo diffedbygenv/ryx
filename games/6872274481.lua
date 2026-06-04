@@ -88,22 +88,16 @@ local runService = cloneref(game:GetService('RunService'))
 local inputService = cloneref(game:GetService('UserInputService'))
 local tweenService = cloneref(game:GetService('TweenService'))
 local httpService = cloneref(game:GetService('HttpService'))
-local textChatService = cloneref(game:GetService('TextChatService'))
 local collectionService = cloneref(game:GetService('CollectionService'))
 local contextActionService = cloneref(game:GetService('ContextActionService'))
 local guiService = cloneref(game:GetService('GuiService'))
-local coreGui = cloneref(game:GetService('CoreGui'))
-local starterGui = cloneref(game:GetService('StarterGui'))
 local VirtualInputManager = game:GetService("VirtualInputManager")
-local lightingService = cloneref(game:GetService('Lighting'))
 
 local isnetworkowner = identifyexecutor and table.find({'Delta', 'Volt'}, ({identifyexecutor()})[1]) and isnetworkowner or function()
 	return true
 end
 local gameCamera = workspace.CurrentCamera
 local lplr = playersService.LocalPlayer
-local assetfunction = getcustomasset
-
 local vape = shared.vape
 if vape and not vape.Clean then
 	vape.Clean = function(self, conn)
@@ -175,7 +169,6 @@ local HitBoxes = {}
 local TrapDisabler
 local AntiFallPart
 local bedwars, remotes, sides, oldinvrender, oldSwing = {}, {}, {}
-local originalKnit
 local function getAccountTier(player)
 	if player == lplr then return 99 end
 	return 0
@@ -402,17 +395,14 @@ end
 local function getSpeed()
 	local multi, increase, modifiers = 0, true, bedwars.SprintController:getMovementStatusModifier():getModifiers()
 
-	local modifiers2 = bedwars.SprintController:getMovementStatusModifier():getModifiers()
 	for v in modifiers do
-		local val = v.constantSpeedMultiplier and v.constantSpeedMultiplier or 0
+		local val = v.constantSpeedMultiplier
 		if val and val > math.max(multi, 1) then
 			increase = false
 			multi = val - (0.06 * math.round(val))
+		elseif v.moveSpeedMultiplier then
+			multi += math.max(v.moveSpeedMultiplier - 1, 0)
 		end
-	end
-
-	for v in modifiers2 do
-		multi += math.max((v.moveSpeedMultiplier or 0) - 1, 0)
 	end
 
 	if multi > 0 and increase then
@@ -420,14 +410,6 @@ local function getSpeed()
 	end
 
 	return 20 * (multi + 1)
-end
-
-local function getTableSize(tab)
-	local ind = 0
-	for _ in tab do
-		ind += 1
-	end
-	return ind
 end
 
 local function hotbarSwitch(slot)
@@ -513,7 +495,7 @@ local function modifyVelocity(v)
 end
 
 local function updateVelocity(force)
-	local newState = getTableSize(frictionTable) > 0
+	local newState = next(frictionTable) ~= nil
 	if frictionState ~= newState or force then
 		if frictionConnection then
 			frictionConnection:Disconnect()
@@ -625,20 +607,6 @@ local sortmethods = {
 }
 
 run(function()
-	local oldstart = entitylib.start
-	local function customEntity(ent)
-		if ent:HasTag('inventory-entity') and not ent:HasTag('Monster') then
-			return
-		end
-
-		entitylib.addEntity(ent, nil, ent:HasTag('Drone') and function(self)
-			local droneplr = playersService:GetPlayerByUserId(self.Character:GetAttribute('PlayerUserId'))
-			return not droneplr or lplr:GetAttribute('Team') ~= droneplr:GetAttribute('Team')
-		end or function(self)
-			return lplr:GetAttribute('Team') ~= self.Character:GetAttribute('Team')
-		end)
-	end
-
 	entitylib.start = function()
 		if entitylib.Running then entitylib.stop() end
 
@@ -34875,7 +34843,7 @@ run(function()
 		AEGT:Clean(TeleportService:Teleport(game.PlaceId, lplr, data))
 	end
 
-	AEGT = vape.Categories.AltFarm:CreateModule({
+	AEGT = vape.Categories.Blatant:CreateModule({
 		Name = 'AutoEmptyGameTP',
 		Function = function(callback)
 			if callback then
