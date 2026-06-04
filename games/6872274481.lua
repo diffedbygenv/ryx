@@ -3193,7 +3193,7 @@ run(function()
 		Darker = true,
 		Visible = true,
 		Min = 0,
-		Max = 20,
+		Max = 55,
 		Default = 18,
 		Function = function(val)
 			if Reach.Enabled then
