@@ -842,6 +842,7 @@ run(function()
 		end)
 	end
 
+	local lastUpdate = {}
 	entitylib.getUpdateConnections = function(ent)
 		local char = ent.Character
 		local tab = {
@@ -1260,9 +1261,11 @@ run(function()
 
 	local function getBlockHits(block, blockpos)
 		if not block then return 0 end
-		local breaktype = bedwars.ItemMeta[block.Name].block.breakType
+		local meta = bedwars.ItemMeta[block.Name]
+		if not meta then return 0 end
+		local breaktype = meta.block.breakType
 		local tool = store.tools[breaktype]
-		tool = tool and bedwars.ItemMeta[tool.itemType].breakBlock[breaktype] or 2
+		tool = tool and bedwars.ItemMeta[tool.itemType] and bedwars.ItemMeta[tool.itemType].breakBlock[breaktype] or 2
 		return getBlockHealth(block, bedwars.BlockController:getBlockPosition(blockpos)) / tool
 	end
 
@@ -1358,7 +1361,9 @@ run(function()
 			if not dblock then return end
 
 			if not nobreak and (workspace:GetServerTimeNow() - bedwars.SwordController.lastAttack) > 0.2 then
-				local breaktype = bedwars.ItemMeta[dblock.Name].block.breakType
+				local dblockMeta = bedwars.ItemMeta[dblock.Name]
+				if not dblockMeta then return end
+				local breaktype = dblockMeta.block.breakType
 				local tool = store.tools[breaktype]
 				if tool then
 					if autotool then
@@ -1594,6 +1599,7 @@ run(function()
 		store.shopLoaded = true
 	end)
 
+	local lagConnections = {}
 	vape:Clean(function()
 		Client.Get = OldGet
 		bedwars.BlockController.isBlockBreakable = OldBreak
@@ -2190,7 +2196,8 @@ local function getScaffoldBlockForModule(limitItem)
 			return wool
 		else
 			for _, item in store.inventory.inventory.items do
-				if bedwars.ItemMeta[item.itemType].block then
+				local itemMeta = bedwars.ItemMeta[item.itemType]
+				if itemMeta and itemMeta.block then
 					return item.itemType
 				end
 			end
@@ -3291,7 +3298,7 @@ run(function()
 					if not bedwars.AppController:isLayerOpen(bedwars.UILayers.MAIN) then
 
 						if SwordToggle.Enabled then
-							if store.hand.toolType == 'sword' and bedwars.DaoController.chargingMaid == nil and not bedwars.SwordController.disableSwingState then
+							if store.hand.toolType == 'sword' and store.hand.tool and bedwars.DaoController.chargingMaid == nil and not bedwars.SwordController.disableSwingState then
 								local attackRange = bedwars.ItemMeta[store.hand.tool.Name].sword.attackRange
 						
 								local unit = lplr:GetMouse().UnitRay
@@ -3317,7 +3324,7 @@ run(function()
 									t = 0.028
 								end
 
-							elseif store.equippedKit == 'summoner' and store.hand.tool.Name:find('summoner_claw') then
+							elseif store.equippedKit == 'summoner' and store.hand.tool and store.hand.tool.Name:find('summoner_claw') then
 								local unit = lplr:GetMouse().UnitRay
 								local localPos = entitylib.character.RootPart.Position
 								local rayRange = 14.4
@@ -3350,7 +3357,7 @@ run(function()
 								t = 0.1
 							end
 						end
-						if ProjectileToggle.Enabled then
+						if ProjectileToggle.Enabled and store.hand.tool then
 							local toolName = store.hand.tool.Name:lower()
 							local meta = bedwars.ItemMeta[toolName]
 
@@ -5506,7 +5513,7 @@ run(function()
                         vapeTargetInfo.Targets.Killaura = nil
                     end
 
-                    if sword then
+                    if sword and entitylib.character and entitylib.character.RootPart then
                         if sword.itemType ~= _cachedSwordType then
                             _cachedSwordType = sword.itemType
                             _cachedIsClaw = sword.itemType and sword.itemType:find("summoner_claw") ~= nil
@@ -5698,7 +5705,7 @@ run(function()
                         end
                     end)
 
-                    if Face and Face.Enabled and attacked[1] then
+                    if Face and Face.Enabled and attacked[1] and attacked[1].Entity.RootPart and entitylib.character and entitylib.character.RootPart then
                         local vec = attacked[1].Entity.RootPart.Position * Vector3.new(1, 0, 1)
                         local targetCFrame = CFrame.lookAt(entitylib.character.RootPart.Position, Vector3.new(vec.X, entitylib.character.RootPart.Position.Y + 0.001, vec.Z))
                         local speed = FaceSpeed and FaceSpeed.Value or 15
