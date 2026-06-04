@@ -34917,3 +34917,394 @@ task.spawn(function()
 	end)
 	gui.ChildRemoved:Connect(function() btn = nil; gui = nil end)
 end)
+
+
+run(function()
+    local BowAssist
+    local Targets
+    local Sort
+    local Shake
+    local Speed
+    local Angle
+    local FOV
+    local Blacklist
+    local Mouse
+    local ThirdPerson
+    local Projectiles
+    
+    local function ease(t)
+    	return t < 0.5 and 4 * t * t * t or 1 - math.pow(-2 * t + 2, 3) / 2
+    end
+    
+    local function findAim(localcframe, predicted, fps, started, offset)
+    	local prog, rng = ease(math.min((tick() - started) / (1 / (Speed.Value * 0.5)), 1)), Random.new()
+    	local speed = Speed.Value * prog
+    
+    	return localcframe:Lerp(CFrame.lookAt(localcframe.p, predicted + Vector3.new((rng:NextNumber() - 0.5) * Shake.Value * fps, offset + ((rng:NextNumber() - 0.5) * Shake.Value * fps), (rng:NextNumber() - 0.5) * Shake.Value * fps)), speed * fps), speed
+    end
+    
+    local launchHook
+    local lasttarget, started = nil, 0
+    local function getAttackData()
+    	if not entitylib.isAlive then
+    		return false
+    	end
+    	if Mouse.Enabled and not inputService:IsMouseButtonPressed(0) then
+    		return false
+    	end
+    	if not store.hand.tool or not bedwars.ItemMeta[store.hand.tool.Name].projectileSource and store.hand.toolType ~= 'bow' then
+    		return false
+    	end
+    	if Blacklist.Enabled and table.find(Projectiles.ListEnabled, store.hand.tool.Name == 'glue_trap' and 'gloop' or store.hand.tool.Name) then
+    		return false
+    	end
+    
+    	if (tick() - started) > 1 or not lasttarget or not lasttarget.Parent or not lasttarget.Humanoid or lasttarget.Humanoid.Health <= 0 then
+    		local ent = entitylib.EntityMouse({
+    			Origin = entitylib.character.RootPart.Position,
+    			Range = FOV.Value,
+    			Part = 'RootPart',
+    			Wallcheck = Targets.Walls.Enabled,
+    			Players = Targets.Players.Enabled,
+    			NPCs = Targets.NPCs.Enabled,
+    			Sort = sortmethods[Sort.Value],
+    		})
+    		if ent then
+    			started = tick()
+    		end
+    		lasttarget = ent
+    	end
+    	return lasttarget
+    end
+    
+    local rayCheck = RaycastParams.new()
+    
+    BowAssist = vape.Categories.Combat:CreateModule({
+    	Name = 'Bow Assist',
+    	Function = function(callback)
+    		if callback then
+    			local multi, predicted = 0, nil
+    			local lastpredicted = 0
+    			local lastent, found, update = nil, 0, 0
+    
+    			launchHook = bedwars.ProjectileLaunchHook:Add('BowAssist', 10, function(nextLaunch, ...)
+    				local res = nextLaunch(...)
+    				local projmeta = select(2, ...)
+    				multi = projmeta and (projmeta.velocityMultiplier + 2) or 0
+    				if projmeta and tick() - update < 0.1 and lastent and lastent.RootPart then
+    					local meta = projmeta:getProjectileMeta()
+    					local gravity = (meta.gravitationalAcceleration or 196.2) * projmeta.gravityMultiplier
+    					local calc = prediction.SolveTrajectory(entitylib.character.RootPart.Position, (meta.launchVelocity or 100) * (1 - lplr:GetNetworkPing()), gravity, lastent.RootPart.Position, lastent.RootPart.Velocity, workspace.Gravity, entitylib.character.HipHeight, nil, rayCheck)
+    					predicted = calc
+    					lastpredicted = tick()
+    				else
+    					predicted = nil
+    				end
+    				return res
+    			end)
+    
+    			BowAssist:Clean(runService.PostSimulation:Connect(function(dt)
+    				local ent = getAttackData()
+    				if ent then
+    					local delta = (ent.RootPart.Position - entitylib.character.RootPart.Position)
+    					local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
+    					local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
+    					if angle >= (math.rad(Angle.Value) / 2) then
+    						return
+    					end
+    					if ent ~= lastent then
+    						found = tick()
+    					end
+    					lastent = ent
+    					update = tick()
+    					if tick() - lastpredicted < 0.1 then
+    						targetinfo.Targets[ent] = tick() + 1
+    						local cframe, speed = findAim(gameCamera.CFrame, predicted or ent.RootPart.Position, dt, found, multi + ((entitylib.character.RootPart.Position.Y - ent.RootPart.Position.Y) / 7))
+    						if inputService.MouseEnabled and entitylib.character.Head.LocalTransparencyModifier == 1 then
+    							gameCamera.CFrame = cframe
+    						elseif ThirdPerson.Enabled and inputService.MouseEnabled then
+    							local viewport = gameCamera:WorldToViewportPoint(predicted)
+    							local pos = (Vector2.new(viewport.X, viewport.Y) - inputService:GetMouseLocation()) * (speed / 15)
+    							mousemoverel(pos.X, pos.Y)
+    						end
+    					end
+    				end
+    			end))
+    		else
+    			if launchHook then
+    				launchHook()
+    				launchHook = nil
+    			end
+    		end
+    	end,
+        Tooltip = 'Smoothly aims your projectile trajectory to the target'
+    })
+    
+    Targets = BowAssist:CreateTargets({
+    	Players = true,
+    	Walls = true,
+    })
+    local methods = {'Damage', 'Distance'}
+    for i in sortmethods do
+    	if not table.find(methods, i) then
+    		table.insert(methods, i)
+    	end
+    end
+    Sort = BowAssist:CreateDropdown({
+    	Name = 'Target mode',
+    	List = methods,
+    	Default = 'Angle',
+    })
+    Speed = BowAssist:CreateSlider({
+    	Name = 'Aim speed',
+    	Min = 1,
+    	Max = 20,
+    	Default = 7,
+    	Suffix = 'sp/s',
+    	Tooltip = 'How fast you will aim per second',
+    })
+    Angle = BowAssist:CreateSlider({
+    	Name = 'Max angle',
+    	Min = 1,
+    	Max = 360,
+    	Default = 120,
+    })
+    Shake = BowAssist:CreateSlider({
+    	Name = 'Shake',
+    	Min = 1,
+    	Max = 100,
+    	Default = 5,
+    	Tooltip = 'Jitters your screen, Simulating human aim',
+    })
+    FOV = BowAssist:CreateSlider({
+    	Name = 'FOV',
+    	Min = 1,
+    	Max = 1000,
+    	Default = 200,
+    })
+    Mouse = BowAssist:CreateToggle({
+    	Name = 'Require mouse down',
+    	Default = inputService.KeyboardEnabled,
+    })
+    ThirdPerson = BowAssist:CreateToggle({
+    	Name = 'Use mouse aim',
+    	Tooltip = 'Aims using the mouse if ur on third person',
+    	Default = true,
+    })
+    Blacklist = BowAssist:CreateToggle({
+    	Name = 'Use blacklist',
+    	Default = true,
+    	Function = function(callback)
+    		if Projectiles then
+    			Projectiles.Object.Visible = callback
+    		end
+    	end,
+    	Tooltip = 'Doesn\'t bow-assist if your holding one of the blacklisted projectiles',
+    })
+    Projectiles = BowAssist:CreateTextList({
+    	Name = 'Blacklisted',
+    	Default = { 'fireball', 'telepearl', 'gloop' },
+    	Darker = true,
+    })
+end)
+
+run(function()
+    local old
+    
+    vape.Categories.Combat:CreateModule({
+        Name = 'No Click Delay',
+        Function = function(callback)
+            if callback then
+                old = bedwars.SwordController.isClickingTooFast
+                bedwars.SwordController.isClickingTooFast = function(self)
+                    self.lastSwing = os.clock()
+                    return false
+                end
+            else
+                bedwars.SwordController.isClickingTooFast = old
+            end
+        end,
+        Tooltip = 'Remove the CPS cap'
+    })
+end)
+
+run(function()
+    if canDebug then
+    	run(function()
+    		local BlockReach
+    		local BlockRange
+    		local BreakReach
+    		local BreakRange
+    		local SwordReach
+    		local SwordRange
+    
+    		local old
+    
+    		Reach = vape.Categories.Combat:CreateModule({
+    			Name = 'Reach',
+    			Tooltip = 'Allows you to place, attack, and break further',
+    			Function = function(callback)
+    				bedwars.CombatConstant.RAYCAST_SWORD_CHARACTER_DISTANCE = callback and SwordReach.Enabled and SwordRange.Value + 2 or 14.4
+    				if callback then
+    					old = bedwars.BlockSelector.getMouseInfo
+    					bedwars.BlockSelector.getMouseInfo = function(...)
+    						local Self, Select, Args = ...
+    						if not Args then
+    							Args = {}
+    						end
+    						if Select == 0 then
+    							Args.range = BlockReach.Enabled and BlockRange.Value or 24
+    						elseif Select == 1 then
+    							Args.range = BreakReach.Enabled and BreakRange.Value or 18
+    						end
+    						return old(Self, Select, Args)
+    					end
+    				else
+    					bedwars.BlockSelector.getMouseInfo = old
+    					old = nil
+    				end
+    			end,
+    		})
+    		SwordReach = Reach:CreateToggle({
+    			Name = 'Sword Reach',
+    			Default = true,
+    			Function = function(callback)
+    				bedwars.CombatConstant.RAYCAST_SWORD_CHARACTER_DISTANCE = Reach.Enabled and callback and SwordRange.Value + 2 or 14.4
+    				pcall(function()
+    					SwordRange.Object.Visible = callback
+    				end)
+    			end,
+    		})
+    		SwordRange = Reach:CreateSlider({
+    			Name = 'Sword Range',
+    			Min = 1,
+    			Max = 18,
+    			Default = 18,
+    			Decimal = 5,
+    			Darker = true,
+    			Suffix = function(val)
+    				return val <= 1 and 'stud' or 'studs'
+    			end,
+    			Function = function(val)
+    				bedwars.CombatConstant.RAYCAST_SWORD_CHARACTER_DISTANCE = Reach.Enabled and SwordReach.Enabled and val or 14.4
+    			end,
+    		})
+    		BlockReach = Reach:CreateToggle({
+    			Name = 'Placement Reach',
+    			Function = function(callback)
+    				BlockRange.Object.Visible = callback
+    			end,
+    		})
+    		BlockRange = Reach:CreateSlider({
+    			Name = 'Placement Range',
+    			Min = 1,
+    			Max = 60,
+    			Default = 18,
+    			Darker = true,
+    			Suffix = function(val)
+    				return val <= 1 and 'stud' or 'studs'
+    			end,
+    			Visible = false,
+    		})
+    		BreakReach = Reach:CreateToggle({
+    			Name = 'Break Reach',
+    			Function = function(callback)
+    				BreakRange.Object.Visible = callback
+    			end,
+    		})
+    		BreakRange = Reach:CreateSlider({
+    			Name = 'Break Range',
+    			Min = 1,
+    			Max = 30,
+    			Default = 30,
+    			Decimal = 5,
+    			Darker = true,
+    			Suffix = function(val)
+    				return val <= 1 and 'stud' or 'studs'
+    			end,
+    			Visible = false,
+    		})
+    		Reach:CreateButton({
+    			Name = 'Reset to default reach',
+    			Tooltip = 'Resets every range back to default',
+    			Function = function()
+    				BreakRange:SetValue(18)
+    				BlockRange:SetValue(24)
+    				SwordRange:SetValue(12.4)
+    			end,
+    		})
+    	end)
+    else
+    	local Value
+    	local rayParams = RaycastParams.new()
+    	rayParams.RespectCanCollide = true
+    
+    	Reach = vape.Categories.Combat:CreateModule({
+    		Name = 'Reach',
+    		Function = function(callback)
+    			if callback then
+    				Reach:Clean(vapeEvents.CEAttacked.Event:Connect(function()
+    					local doAttack
+    					if not bedwars.AppController:isLayerOpen(bedwars.UILayers.MAIN) then
+    						if
+    							entitylib.isAlive
+    							and store.hand.toolType == 'sword'
+    							and bedwars.DaoController.chargingMaid == nil
+    						then
+    							local attackRange = Value.Value + 2
+    							rayParams.FilterDescendantsInstances = { lplr.Character }
+    
+    							local unit = lplr:GetMouse().UnitRay
+    							local localPos = entitylib.character.RootPart.Position
+    							local rayRange = (attackRange or 14.4)
+    							local ray = workspace:Raycast(unit.Origin, unit.Direction * 200, rayParams)
+    							if ray and (localPos - ray.Instance.Position).Magnitude <= rayRange then
+    								for _, ent in entitylib.List do
+    									doAttack = ent.Targetable
+    										and ray.Instance:IsDescendantOf(ent.Character)
+    										and (localPos - ent.RootPart.Position).Magnitude <= rayRange
+    									if doAttack then
+    										break
+    									end
+    								end
+    							end
+    
+    							local region = bedwars.SwordController:getTargetInRegion(attackRange or 3.8 * 3, 0)
+    							if doAttack then
+    								doAttack = region
+    							end
+    							if doAttack then
+    								local selfpos = entitylib.character.RootPart.Position
+    								local delta = (doAttack.RootPart.Position - selfpos)
+    								local dir = CFrame.lookAt(selfpos, doAttack.RootPart.Position).LookVector
+    								local pos = selfpos + dir * math.max(delta.Magnitude - 14.4, 0)
+    
+    								bedwars.Client:Get('SwordHit'):SendToServer({
+    									weapon = store.hand.tool,
+    									chargedAttack = {chargeRatio = 0},
+    									entityInstance = doAttack.Character,
+    									validate = {
+    										raycast = {},
+    										targetPosition = {value = doAttack.RootPart.Position},
+    										selfPosition = {value = pos},
+    									},
+    								})
+    							end
+    						end
+    					end
+    				end))
+    			end
+    		end,
+    	})
+    	Value = Reach:CreateSlider({
+    		Name = 'Range',
+    		Min = 0,
+    		Max = 18,
+    		Default = 18,
+    		Suffix = function(val)
+    			return val == 1 and 'stud' or 'studs'
+    		end,
+    	})
+    end
+end)
+
