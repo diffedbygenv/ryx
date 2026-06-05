@@ -35069,3 +35069,103 @@ run(function()
     end
 end)
 
+
+run(function()
+    local AutoSteal
+    local Range
+    local Delay
+    local GUI
+    
+    local Start = 0
+    
+    AutoSteal = vape.Categories.Inventory:CreateModule({
+    	Name = 'Auto Steal',
+    	Function = function(call)
+    		if call then
+    			repeat
+    				task.wait()
+    			until store.matchState ~= 0 or not AutoSteal.Enabled
+    			if not AutoSteal.Enabled then
+    				return
+    			end
+    
+    			local crates, items = collection('team-crate', AutoSteal, function(tab, obj)
+                    task.delay(0, function()
+                        if obj:GetAttribute('Team') ~= lplr:GetAttribute('Team') then
+                            table.insert(tab, obj)
+                        end
+                    end)
+                end), {}
+    			repeat
+    				if entitylib.isAlive then
+    					local localPosition = entitylib.character.RootPart.Position
+    					if (tick() - Start) >= Delay.Value and (not GUI.Enabled or bedwars.AppController:isAppOpen('ChestApp')) then
+    						for _, v in crates do
+    							if (localPosition - v.Position).Magnitude <= Range.Value then
+    								local folder = v.ChestFolderValue.Value
+    								bedwars.Client:GetNamespace('Inventory'):Get('SetObservedChest'):SendToServer(folder)
+    								for _, v2 in folder:GetChildren() do
+    									if v2:IsA('Accessory') then
+    										task.spawn(function()
+    											if bedwars.Client:GetNamespace('Inventory'):Get('ChestGetItem'):CallServer(folder, v2) then
+    												table.insert(items, v2.Name)
+    											end
+    										end)
+    									end
+    								end
+    								bedwars.Client:GetNamespace('Inventory'):Get('SetObservedChest'):SendToServer(nil)
+    							end
+    						end
+    
+    						if #items > 0 then
+    							for _, v in collectionService:GetTagged('personal-chest') do
+    								if (localPosition - v.Position).Magnitude <= Range.Value then
+    									for _, v2 in items do
+    										local i = getItem(v2)
+    										if i then
+    											task.spawn(function()
+    												if bedwars.Client:GetNamespace('Inventory'):Get('ChestGiveItem'):CallServer(
+                                                        replicatedStorage.Inventories[lplr.Name .. '_personal'],
+                                                        i.tool
+                                                    ) then
+    													table.remove(items, table.find(items, v2))
+    												end
+    											end)
+    										end
+    									end
+    									break
+    								end
+    							end
+    						end
+    
+    						Start = tick()
+    					end
+    				end
+    				task.wait(0.1)
+    			until not AutoSteal.Enabled
+    		end
+    	end,
+    	Tooltip = "Automatically steals loot from other team's chest, And personal chesting it",
+    })
+    
+    Range = AutoSteal:CreateSlider({
+    	Name = 'Range',
+    	Min = 1,
+    	Max = 18,
+    	Suffix = function(val)
+    		return val <= 1 and 'stud' or 'studs'
+    	end,
+    	Default = 18,
+    })
+    Delay = AutoSteal:CreateSlider({
+    	Name = 'Delay',
+    	Min = 0,
+    	Max = 1,
+    	Decimal = 100,
+    	Suffix = 'seconds',
+    	Default = 0,
+    })
+    GUI = AutoSteal:CreateToggle({
+    	Name = 'GUI Check',
+    })
+end)																																																																		
