@@ -41,78 +41,56 @@ pcall(function()
 			bar.Size = UDim2.new(0, s, 1, 0)
 		end
 	end)
-		
 	run = function(func)
-			local function injectToggleErrorHandler()
-    if not vape or not vape.Categories then return end
-    
-    for _, category in pairs(vape.Categories) do
-        if type(category) == "table" and type(category.CreateModule) == "function" and not rawget(category, "_FuzzynutsHooked") then
-            local oldCreate = category.CreateModule
-            
-            category.CreateModule = function(self, moduleData)
-                if type(moduleData) == "table" and type(moduleData.Function) == "function" then
-                    local originalFunction = moduleData.Function
-                    
-                    moduleData.Function = function(callback)
-                        local success, errorMessage = xpcall(function()
-                            originalFunction(callback)
-                        end, function(err)
-                            return debug.traceback(tostring(err), 2)
-                        end)
-
-                        if not success then
-                            local modName = moduleData.Name or "Unknown"
-                            local cleanError = tostring(errorMessage):match(":%d+: (.*)") or tostring(errorMessage)
-                            
-                            warn(("[Fuzzynuts Error] %s crashed: %s"):format(modName, cleanError))
-                            
-                            pcall(function()
-                                vape:CreateNotification(
-                                    "Module Crash",
-                                    ("%s failed:\n%s"):format(modName, cleanError:sub(1, 150)),
-                                    15,
-                                    "alert"
-                                )
-                            end)
-
-                            if callback then
-                                task.spawn(function()
-                                    pcall(function()
-                                        local modObj = vape.Modules and vape.Modules[modName]
-                                        if modObj and modObj.Enabled then modObj:Toggle() end
-                                    end)
-                                end)
-                            end
-                        end
-                    end
-                end
-                return oldCreate(self, moduleData)
-            end
-            rawset(category, "_FuzzynutsHooked", true)
-        end
-    end
-end
-pcall(injectToggleErrorHandler)
-
-if vape and vape.CreateNotification then
-    local oldNotif = vape.CreateNotification
-    vape.CreateNotification = function(self, title, text, duration, type)
-        task.spawn(function()
-            pcall(oldNotif, self, title, text, duration, type)
-        end)
-    end
-end
-			
-		local ok, err = xpcall(func, debug.traceback)
-		if not ok then
-			warn('[SKIDV7] module failed to load: ' .. tostring(err))
-			pcall(function()
-				vape:CreateNotification('Fuzzynuts', 'Module error: ' .. tostring(err):match('(.+)\n') or tostring(err), 10, 'alert')
-			end)
-		end
+	local ok, err = xpcall(func, debug.traceback)
+	if not ok then
+		warn('[SKIDV7] module failed to load: ' .. tostring(err))
+		pcall(function()
+			vape:CreateNotification('Fuzzynuts', 'Module error: ' .. tostring(err):match('(.+)\n') or tostring(err), 10, 'alert')
+		end)
 	end
-end)
+	if not rawget(getgenv(), "_FuzzynutsToggleHooked") then
+		rawset(getgenv(), "_FuzzynutsToggleHooked", true)
+		task.spawn(function()
+			repeat task.wait() until vape and vape.Categories
+			for _, category in pairs(vape.Categories) do
+				if type(category) == "table" and type(category.CreateModule) == "function" then
+					local oldCreate = category.CreateModule
+					category.CreateModule = function(self, moduleData)
+						if type(moduleData) == "table" and type(moduleData.Function) == "function" then
+							local originalFunction = moduleData.Function
+							moduleData.Function = function(callback)
+								local success, errorMessage = xpcall(function()
+									originalFunction(callback)
+								end, function(e)
+									return debug.traceback(tostring(e), 2)
+								end)
+								if not success then
+									local modName = moduleData.Name or "Unknown"
+									local cleanError = tostring(errorMessage):match(":%d+: (.*)") or tostring(errorMessage)
+									warn(("[Fuzzynuts Error] %s crashed: %s"):format(modName, cleanError))
+									pcall(function()
+										vape:CreateNotification("Module Crash", ("%s failed:\n%s"):format(modName, cleanError:sub(1, 150)), 15, "alert")
+									end)
+									if callback then
+										task.spawn(function()
+											pcall(function()
+												local modObj = vape.Modules and vape.Modules[modName]
+												if modObj and modObj.Enabled then modObj:Toggle() end
+											end)
+										end)
+									end
+								end
+							end
+						end
+						return oldCreate(self, moduleData)
+					end
+				end
+			end
+		end)
+	end
+end
+
 local vapeEvents = setmetatable({}, {
 	__index = function(self, index)
 		self[index] = Instance.new('BindableEvent')
