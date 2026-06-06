@@ -26,8 +26,33 @@ local function downloadFile(path, func)
 	end
 	return (func or readfile)(path)
 end
+-- Module Handler: wraps each run() block in pcall so broken modules
+-- show a Vape alert notification with the error + line number instead of crashing.
 local run = function(func)
-	func()
+	local ok, err = pcall(func)
+	if not ok then
+		local errStr = tostring(err)
+		-- Pull out line number from the error string (e.g. "script:1234: attempt to...")
+		local lineNum = errStr:match(':(%d+):')
+		local cleanErr = errStr:gsub('^.-%:%d+%:%s*', '') -- strip leading "file:line:" prefix
+
+		local notifMsg
+		if lineNum then
+			notifMsg = 'Line ' .. lineNum .. ': ' .. cleanErr
+		else
+			notifMsg = cleanErr
+		end
+
+		-- Cap message length so it fits in the notification panel
+		if #notifMsg > 120 then
+			notifMsg = notifMsg:sub(1, 117) .. '...'
+		end
+
+		if vape and vape.CreateNotification then
+			vape:CreateNotification('[Module Error]', notifMsg, 15, 'alert')
+		end
+		warn('[Fuzzynuts Module Error] ' .. errStr)
+	end
 end
 local queue_on_teleport = queue_on_teleport or function() end
 local cloneref = cloneref or function(obj)
@@ -1894,38 +1919,56 @@ run(function()
 	})
 end)
 	
-run(function()
-	local Killaura
-	local Targets
-	local CPS
-	local SwingRange
-	local AttackRange
-	local AngleSlider
-	local Max
-	local Mouse
-	local Lunge
-	local BoxSwingColor
-	local BoxAttackColor
-	local ParticleTexture
-	local ParticleColor1
-	local ParticleColor2
-	local ParticleSize
+-- ============================================================
+-- Killaura Factory
+-- Each call to createKillaura() produces a fully isolated
+-- instance with its own locals, run-loop, and GUI options.
+-- This means toggling "Killaura" and "Killaura 2" independently
+-- works correctly — neither overwrites the other's upvalues.
+-- ============================================================
+local function createKillaura(name)
+	-- Cache globals as upvalues — global lookups hit the env table every time,
+	-- upvalue reads are a direct register op. Matters most inside the per-frame loop.
+	local _mathAcos   = math.acos
+	local _mathRad    = math.rad
+	local _tblInsert  = table.insert
+	local _tblClear   = table.clear
+	local _tick       = tick
+	local _V3         = Vector3.new
+	local _CFLookAt   = CFrame.lookAt
+	local _C3HSV      = Color3.fromHSV
+	local _CSKp       = ColorSequenceKeypoint.new
+	local _NSNew      = NumberSequence.new
+	local _NRNew      = NumberRange.new
+	-- Bind workspace methods once so the loop never re-indexes workspace
+	local _getBounds  = workspace.GetPartBoundsInBox
+	local _V3_111     = _V3(1, 0, 1)   -- reused every frame, allocate once
+	local _V3_444     = _V3(4, 4, 4)   -- reused every hit-check, allocate once
+	local _V3_FAR     = _V3(9e9, 9e9, 9e9)
+
+	local Killaura, Targets, CPS, SwingRange, AttackRange
+	local AngleSlider, Max, Mouse, Lunge
+	local BoxSwingColor, BoxAttackColor
+	local ParticleTexture, ParticleColor1, ParticleColor2, ParticleSize
 	local Face
+
+	-- One OverlapParams per instance, reused every frame (no per-frame alloc)
 	local Overlay = OverlapParams.new()
 	Overlay.FilterType = Enum.RaycastFilterType.Include
-	local Particles, Boxes, AttackDelay = {}, {}, tick()
-	
+
+	local Particles, Boxes = {}, {}
+	local AttackDelay = _tick()
+
 	local function getAttackData()
 		if Mouse.Enabled then
 			if not inputService:IsMouseButtonPressed(0) then return false end
 		end
-	
 		local tool = getTool()
 		return tool and tool:FindFirstChildWhichIsA('TouchTransmitter', true) or nil, tool
 	end
-	
+
 	Killaura = vape.Categories.Blatant:CreateModule({
-		Name = 'Killaura',
+		Name = name,
 		Function = function(callback)
 			if callback then
 				repeat
@@ -1933,73 +1976,85 @@ run(function()
 					local attacked = {}
 					if interest then
 						local plrs = entitylib.AllPosition({
-							Range = SwingRange.Value,
+							Range    = SwingRange.Value,
 							Wallcheck = Targets.Walls.Enabled or nil,
-							Part = 'RootPart',
-							Players = Targets.Players.Enabled,
-							NPCs = Targets.NPCs.Enabled,
-							Limit = Max.Value
+							Part     = 'RootPart',
+							Players  = Targets.Players.Enabled,
+							NPCs     = Targets.NPCs.Enabled,
+							Limit    = Max.Value
 						})
-	
+
 						if #plrs > 0 then
-							local selfpos = entitylib.character.RootPart.Position
-							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
-	
+							local char      = entitylib.character
+							local selfpos   = char.RootPart.Position
+							-- Pre-flatten to XZ once per frame instead of per-player
+							local facing    = char.RootPart.CFrame.LookVector * _V3_111
+							local halfAngle = _mathRad(AngleSlider.Value) * 0.5
+							local atkRange  = AttackRange.Value
+							local swgRange  = SwingRange.Value -- already used above but cache locally
+							local now       = _tick()
+							local lungeOn   = Lunge.Enabled
+							local interestP = interest.Parent
+
 							for _, v in plrs do
-								local delta = (v.RootPart.Position - selfpos)
-								local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
-								if angle > (math.rad(AngleSlider.Value) / 2) then continue end
-	
-								table.insert(attacked, {
+								local rootPart = v.RootPart
+								local delta    = rootPart.Position - selfpos
+								-- XZ-only dot for angle check (same math as before, no alloc)
+								local flatDelta = delta * _V3_111
+								local angle = _mathAcos(facing:Dot(flatDelta.Unit))
+								if angle > halfAngle then continue end
+
+								local distMag = delta.Magnitude
+								_tblInsert(attacked, {
 									Entity = v,
-									Check = delta.Magnitude > AttackRange.Value and BoxSwingColor or BoxAttackColor
+									Check  = distMag > atkRange and BoxSwingColor or BoxAttackColor
 								})
-								targetinfo.Targets[v] = tick() + 1
-	
-								if AttackDelay < tick() then
-									AttackDelay = tick() + (1 / CPS.GetRandomValue())
+								targetinfo.Targets[v] = now + 1
+
+								if AttackDelay < now then
+									AttackDelay = now + (1 / CPS.GetRandomValue())
 									tool:Activate()
 								end
-	
-								if Lunge.Enabled and tool.GripUp.X == 0 then break end
-								if delta.Magnitude > AttackRange.Value then continue end
-	
+
+								if lungeOn and tool.GripUp.X == 0 then break end
+								if distMag > atkRange then continue end
+
 								Overlay.FilterDescendantsInstances = {v.Character}
-								for _, part in workspace:GetPartBoundsInBox(v.RootPart.CFrame, Vector3.new(4, 4, 4), Overlay) do
-									firetouchinterest(interest.Parent, part, 1)
-									firetouchinterest(interest.Parent, part, 0)
+								for _, part in _getBounds(workspace, rootPart.CFrame, _V3_444, Overlay) do
+									firetouchinterest(interestP, part, 1)
+									firetouchinterest(interestP, part, 0)
 								end
 							end
 						end
 					end
-	
+
 					for i, v in Boxes do
-						v.Adornee = attacked[i] and attacked[i].Entity.RootPart or nil
+						local hit = attacked[i]
+						v.Adornee = hit and hit.Entity.RootPart or nil
 						if v.Adornee then
-							v.Color3 = Color3.fromHSV(attacked[i].Check.Hue, attacked[i].Check.Sat, attacked[i].Check.Value)
-							v.Transparency = 1 - attacked[i].Check.Opacity
+							local c = hit.Check
+							v.Color3       = _C3HSV(c.Hue, c.Sat, c.Value)
+							v.Transparency = 1 - c.Opacity
 						end
 					end
-	
+
 					for i, v in Particles do
-						v.Position = attacked[i] and attacked[i].Entity.RootPart.Position or Vector3.new(9e9, 9e9, 9e9)
-						v.Parent = attacked[i] and gameCamera or nil
+						local hit = attacked[i]
+						v.Position = hit and hit.Entity.RootPart.Position or _V3_FAR
+						v.Parent   = hit and gameCamera or nil
 					end
-	
+
 					if Face.Enabled and attacked[1] then
-						local vec = attacked[1].Entity.RootPart.Position * Vector3.new(1, 0, 1)
-						entitylib.character.RootPart.CFrame = CFrame.lookAt(entitylib.character.RootPart.Position, Vector3.new(vec.X, entitylib.character.RootPart.Position.Y + 0.01, vec.Z))
+						local rootPos = char.RootPart.Position
+						local vec     = attacked[1].Entity.RootPart.Position * _V3_111
+						entitylib.character.RootPart.CFrame = _CFLookAt(rootPos, _V3(vec.X, rootPos.Y + 0.01, vec.Z))
 					end
-	
+
 					task.wait()
 				until not Killaura.Enabled
 			else
-				for _, v in Boxes do
-					v.Adornee = nil
-				end
-				for _, v in Particles do
-					v.Parent = nil
-				end
+				for _, v in Boxes    do v.Adornee  = nil end
+				for _, v in Particles do v.Parent   = nil end
 			end
 		end,
 		Tooltip = 'Attack players around you\nwithout aiming at them.'
@@ -2139,8 +2194,8 @@ run(function()
 		Function = function(hue, sat, val)
 			for _, v in Particles do
 				v.ParticleEmitter.Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, Color3.fromHSV(hue, sat, val)),
-					ColorSequenceKeypoint.new(1, Color3.fromHSV(ParticleColor2.Hue, ParticleColor2.Sat, ParticleColor2.Value))
+					_CSKp(0, _C3HSV(hue, sat, val)),
+					_CSKp(1, _C3HSV(ParticleColor2.Hue, ParticleColor2.Sat, ParticleColor2.Value))
 				})
 			end
 		end,
@@ -2152,8 +2207,8 @@ run(function()
 		Function = function(hue, sat, val)
 			for _, v in Particles do
 				v.ParticleEmitter.Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, Color3.fromHSV(ParticleColor1.Hue, ParticleColor1.Sat, ParticleColor1.Value)),
-					ColorSequenceKeypoint.new(1, Color3.fromHSV(hue, sat, val))
+					_CSKp(0, _C3HSV(ParticleColor1.Hue, ParticleColor1.Sat, ParticleColor1.Value)),
+					_CSKp(1, _C3HSV(hue, sat, val))
 				})
 			end
 		end,
@@ -2168,14 +2223,18 @@ run(function()
 		Decimal = 100,
 		Function = function(val)
 			for _, v in Particles do
-				v.ParticleEmitter.Size = NumberSequence.new(val)
+				v.ParticleEmitter.Size = _NSNew(val)
 			end
 		end,
 		Darker = true,
 		Visible = false
 	})
 	Face = Killaura:CreateToggle({Name = 'Face target'})
-end)
+end
+
+-- Spawn both killaura instances — each runs in its own isolated scope
+run(function() createKillaura('CV KA') end)
+run(function() createKillaura('Aero Ka') end)
 	
 run(function()
 	local Mode
