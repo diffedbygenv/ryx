@@ -2,13 +2,6 @@ local j1l1jil1i=Path2DControlPoint.new(UDim2.new(0,0,0,0))
 repeat task.wait() until game:IsLoaded()
 if shared.vape then shared.vape:Uninject() end
 
-getgenv = getgenv or function()
-	return getfenv and getfenv(0) or shared
-end
-clonefunction = clonefunction or function(f)
-	return function(...) return f(...) end
-end
-
 local args = ...
 if type(args) == "table" and args.Username then
 	shared.ValidatedUsername = args.Username
