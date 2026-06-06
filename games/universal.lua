@@ -26,15 +26,15 @@ local function downloadFile(path, func)
 	end
 	return (func or readfile)(path)
 end
--- Module Handler: wraps each run() block in pcall so broken modules
--- show a Vape alert notification with the error + line number instead of crashing.
+
+
 local run = function(func)
 	local ok, err = pcall(func)
 	if not ok then
 		local errStr = tostring(err)
-		-- Pull out line number from the error string (e.g. "script:1234: attempt to...")
+		
 		local lineNum = errStr:match(':(%d+):')
-		local cleanErr = errStr:gsub('^.-%:%d+%:%s*', '') -- strip leading "file:line:" prefix
+		local cleanErr = errStr:gsub('^.-%:%d+%:%s*', '') 
 
 		local notifMsg
 		if lineNum then
@@ -43,7 +43,7 @@ local run = function(func)
 			notifMsg = cleanErr
 		end
 
-		-- Cap message length so it fits in the notification panel
+		
 		if #notifMsg > 120 then
 			notifMsg = notifMsg:sub(1, 117) .. '...'
 		end
@@ -1919,16 +1919,7 @@ run(function()
 	})
 end)
 	
--- ============================================================
--- Killaura Factory
--- Each call to createKillaura() produces a fully isolated
--- instance with its own locals, run-loop, and GUI options.
--- This means toggling "Killaura" and "Killaura 2" independently
--- works correctly — neither overwrites the other's upvalues.
--- ============================================================
 local function createKillaura(name)
-	-- Cache globals as upvalues — global lookups hit the env table every time,
-	-- upvalue reads are a direct register op. Matters most inside the per-frame loop.
 	local _mathAcos   = math.acos
 	local _mathRad    = math.rad
 	local _tblInsert  = table.insert
@@ -1940,10 +1931,9 @@ local function createKillaura(name)
 	local _CSKp       = ColorSequenceKeypoint.new
 	local _NSNew      = NumberSequence.new
 	local _NRNew      = NumberRange.new
-	-- Bind workspace methods once so the loop never re-indexes workspace
 	local _getBounds  = workspace.GetPartBoundsInBox
-	local _V3_111     = _V3(1, 0, 1)   -- reused every frame, allocate once
-	local _V3_444     = _V3(4, 4, 4)   -- reused every hit-check, allocate once
+	local _V3_111     = _V3(1, 0, 1)   
+	local _V3_444     = _V3(4, 4, 4)   
 	local _V3_FAR     = _V3(9e9, 9e9, 9e9)
 
 	local Killaura, Targets, CPS, SwingRange, AttackRange
@@ -1952,7 +1942,7 @@ local function createKillaura(name)
 	local ParticleTexture, ParticleColor1, ParticleColor2, ParticleSize
 	local Face
 
-	-- One OverlapParams per instance, reused every frame (no per-frame alloc)
+	
 	local Overlay = OverlapParams.new()
 	Overlay.FilterType = Enum.RaycastFilterType.Include
 
@@ -1987,11 +1977,10 @@ local function createKillaura(name)
 						if #plrs > 0 then
 							local char      = entitylib.character
 							local selfpos   = char.RootPart.Position
-							-- Pre-flatten to XZ once per frame instead of per-player
 							local facing    = char.RootPart.CFrame.LookVector * _V3_111
 							local halfAngle = _mathRad(AngleSlider.Value) * 0.5
 							local atkRange  = AttackRange.Value
-							local swgRange  = SwingRange.Value -- already used above but cache locally
+							local swgRange  = SwingRange.Value 
 							local now       = _tick()
 							local lungeOn   = Lunge.Enabled
 							local interestP = interest.Parent
@@ -1999,7 +1988,6 @@ local function createKillaura(name)
 							for _, v in plrs do
 								local rootPart = v.RootPart
 								local delta    = rootPart.Position - selfpos
-								-- XZ-only dot for angle check (same math as before, no alloc)
 								local flatDelta = delta * _V3_111
 								local angle = _mathAcos(facing:Dot(flatDelta.Unit))
 								if angle > halfAngle then continue end
@@ -2232,7 +2220,7 @@ local function createKillaura(name)
 	Face = Killaura:CreateToggle({Name = 'Face target'})
 end
 
--- Spawn both killaura instances — each runs in its own isolated scope
+
 run(function() createKillaura('CV KA') end)
 run(function() createKillaura('Aero Ka') end)
 	
