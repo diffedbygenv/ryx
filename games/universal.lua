@@ -59,6 +59,89 @@ local cloneref = cloneref or function(obj)
 	return obj
 end
 
+
+do
+	local function _noop() end
+
+	
+	getgenv            = getgenv            or function() return getfenv and getfenv(0) or shared end
+	getsenv            = getsenv            or function() return {} end
+	getrenv            = getrenv            or function() return {} end
+
+	setthreadidentity  = setthreadidentity  or _noop
+	getthreadidentity  = getthreadidentity  or function() return 2 end
+
+	
+	clonefunction      = clonefunction      or function(f) return function(...) return f(...) end end
+	newcclosure        = newcclosure        or function(f) return f end
+
+	
+	firetouchinterest  = firetouchinterest  or _noop
+	firesignal         = firesignal         or _noop
+	replicatesignal    = replicatesignal    or _noop
+	fireclickdetector  = fireclickdetector  or _noop
+	fireproximitypromt = fireproximitypromt or _noop
+
+	hookfunction       = hookfunction       or function(f, _hook) return f end
+	hookmetamethod     = hookmetamethod     or function(_obj, _method, _hook) return _noop end
+	restorefunction    = restorefunction    or _noop
+
+	
+	checkcaller        = checkcaller        or function() return false end
+	getcallingscript   = getcallingscript   or function() return nil end
+	getscriptclosure   = getscriptclosure   or function() return nil end
+	getscriptfromthread= getscriptfromthread or function() return nil end
+	getnamecallmethod  = getnamecallmethod  or function() return '' end
+	getcallbackvalue   = getcallbackvalue   or function() return nil end
+	getfunctionhash    = getfunctionhash    or function() return '' end
+
+	
+	getconnections     = getconnections     or function() return {} end
+	getinstances       = getinstances       or function() return {} end
+	getnilinstances    = getnilinstances    or function() return {} end
+	getrunningscripts  = getrunningscripts  or function() return {} end
+	getloadedmodules   = getloadedmodules   or function() return {} end
+	getscripts         = getscripts         or function() return {} end
+	filtergc           = filtergc           or function() return {} end
+	getgc              = getgc              or function() return {} end
+
+	
+	getrawmetatable    = getrawmetatable    or function(obj)
+		local ok, mt = pcall(getmetatable, obj)
+		return ok and mt or nil
+	end
+	setrawmetatable    = setrawmetatable    or function(obj, mt)
+		pcall(setmetatable, obj, mt)
+	end
+
+	
+	gethiddenproperty  = gethiddenproperty  or function() return nil, false end
+	sethiddenproperty  = sethiddenproperty  or _noop
+	isreadonly         = isreadonly         or function() return false end
+	setreadonly        = setreadonly        or _noop
+
+	
+	gethui             = gethui             or function() return game:GetService('CoreGui') end
+
+	
+	cache              = cache              or {}
+	cache.replace      = cache.replace      or _noop
+	cache.iscached     = cache.iscached     or function() return false end
+	cache.invalidate   = cache.invalidate   or _noop
+	
+	debug.setupvalue   = debug.setupvalue   or _noop
+	debug.getupvalue   = debug.getupvalue   or function() return nil end
+	debug.getupvalues  = debug.getupvalues  or function() return {} end
+	debug.getconstant  = debug.getconstant  or function() return nil end
+	debug.getconstants = debug.getconstants or function() return {} end
+	debug.setconstant  = debug.setconstant  or _noop
+	debug.getproto     = debug.getproto     or function() return nil end
+	debug.getprotos    = debug.getprotos    or function() return {} end
+	debug.getinfo      = debug.getinfo      or function() return {} end
+	debug.getstack     = debug.getstack     or function() return {} end
+	debug.setstack     = debug.setstack     or _noop
+end
+
 local playersService = cloneref(game:GetService('Players'))
 local replicatedStorage = cloneref(game:GetService('ReplicatedStorage'))
 local runService = cloneref(game:GetService('RunService'))
