@@ -4922,9 +4922,9 @@ run(function()
     local function canHitWithCustomReg()
         if not CustomHitReg or not CustomHitReg.Enabled then return true end
         if not CustomHitRegSlider then return true end
-        if CustomHitRegSlider.Value >= 36 then return true end
+        if CustomHitRegSlider.Value >= 40 then return true end
         local currentTime = tick()
-        local delayBetweenHits = 10 / CustomHitRegSlider.Value
+        local delayBetweenHits = 7 / CustomHitRegSlider.Value
         if currentTime - lastCustomHitTime >= delayBetweenHits then
             lastCustomHitTime = lastCustomHitTime + delayBetweenHits
             if currentTime - lastCustomHitTime > delayBetweenHits then
@@ -5352,7 +5352,7 @@ run(function()
         if not ent or not ent.RootPart then return end
         local selfPos = entitylib.character.RootPart.Position
         local dist = (ent.RootPart.Position - selfPos).Magnitude
-        if dist > (AttackRange.Value + 2) then return end
+        if dist > (AttackRange.Value + 3) then return end
 
         if FireRate and FireRate.Value > 0 then
             local now = tick()
@@ -5386,7 +5386,7 @@ run(function()
         autoShootLoop = task.spawn(function()
             while Killaura and Killaura.Enabled and FastHits and FastHits.Enabled do
                 doFastHits()
-                task.wait(0.05)
+                task.wait(0.03)
             end
             autoShootLoop = nil
         end)
@@ -5801,14 +5801,14 @@ run(function()
         Name = 'Swing range',
         Min = 1,
         Max = 40,
-        Default = 22,
+        Default = 28,
         Suffix = function(val) return val == 1 and 'stud' or 'studs' end
     })
     AttackRange = Killaura:CreateSlider({
         Name = 'Attack range',
         Min = 1,
-        Max = 22,
-        Default = 22,
+        Max = 29,
+        Default = 28,
         Suffix = function(val) return val == 1 and 'stud' or 'studs' end
     })
     RangeCircle = Killaura:CreateToggle({
@@ -5850,7 +5850,7 @@ run(function()
         Name = 'Swing Time',
         Min = 0,
         Max = 1,
-        Default = 0.42,
+        Default = 0,
         Decimal = 100,
         Visible = false
     })
@@ -5887,8 +5887,8 @@ run(function()
     CustomHitRegSlider = Killaura:CreateSlider({
         Name = 'Hits Per Second',
         Min = 1,
-        Max = 36,
-        Default = 30,
+        Max = 40,
+        Default = 40,
         Tooltip = 'Maximum hits per second',
         Visible = false
     })
