@@ -1,1 +1,1 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/toodiesjamming-stack/Fuzzynuts/main/NewMainScript.lua", true))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/diffedbygenv/ryx/main/NewMainScript.lua", true))()
