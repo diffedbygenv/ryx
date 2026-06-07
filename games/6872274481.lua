@@ -2207,6 +2207,35 @@ local function getScaffoldBlockForModule(limitItem)
 end
 
 run(function()
+    local SigridExploit
+    local Kit = 'elk_master'
+    local Mount = bedwars.Client:Get('ElkKitMounted')
+    
+    if not Mount then
+        warn('[SigridExploit] ElkKitMounted remote not found!')
+        return
+    end
+
+    SigridExploit = vape.Categories.Kits:CreateModule({
+    	Name = 'Infinite Sigrid',
+    	Tooltip = 'Lets you ride in the elk forever',
+    	Function = function(call)
+    		if call then
+    			repeat
+    				if entitylib.isAlive then
+    					-- Check if player has the kit equipped (you may need to adjust this check)
+    					if true then -- Change this condition to match your actual kit check
+    						Mount:SendToServer()
+    					end
+    				end
+    				task.wait(0.1) -- Add a small delay to avoid spam
+    			until not SigridExploit.Enabled
+    		end
+    	end,
+    })
+end)
+	
+run(function()
 local AimAssist
 	local Targets
 	local Sort
