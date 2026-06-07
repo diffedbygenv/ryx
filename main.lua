@@ -20,7 +20,7 @@ local vape
 local loadstring = function(...)
 	local res, err = _realLoadstring(...)
 	if err and vape then
-		vape:CreateNotification('Fuzzynuts', 'Failed to load : '..err, 30, 'alert')
+		vape:CreateNotification('ryx', 'Failed to load : '..err, 30, 'alert')
 	end
 	return res
 end
@@ -97,7 +97,7 @@ pcall(migrateProfiles)
 local function finishLoading()
 	vape.Init = nil
 	if not vape.Load then
-		warn('[Fuzzynuts] vape.Load is nil skipping load')
+		warn('[ryx] vape.Load is nil skipping load')
 		return
 	end
 	vape:Load()
@@ -124,7 +124,7 @@ local function finishLoading()
 				teleportScript = 'shared.ValidatedUsername = "' .. shared.ValidatedUsername .. '"\n' .. teleportScript
 			end
 			local _ok, _err = pcall(function() vape:Save() end)
-			if not _ok then warn('[Fuzzynuts] save failed before teleport: ' .. tostring(_err)) toclipboard(_err) end
+			if not _ok then warn('[ryx] save failed before teleport: ' .. tostring(_err)) toclipboard(_err) end
 			queue_on_teleport(teleportScript)
 		end
 	end))
@@ -132,7 +132,7 @@ local function finishLoading()
 		if not vape.Categories then return end
 		if vape.Categories.Main.Options['GUI bind indicator'].Enabled then
 			local name = shared.ValidatedUsername and ('wsg, ' .. shared.ValidatedUsername .. ' :D ') or 'welcome '
-			vape:CreateNotification('[Fuzzynuts] Finished Loading', name .. (vape.VapeButton and 'Press the button in the top right to open GUI' or 'Press ' .. table.concat(vape.Keybind, ' + '):upper() .. ' to open GUI'), 5)
+			vape:CreateNotification('[ryx] Finished Loading', name .. (vape.VapeButton and 'Press the button in the top right to open GUI' or 'Press ' .. table.concat(vape.Keybind, ' + '):upper() .. ' to open GUI'), 5)
 		end
 	end
 end
