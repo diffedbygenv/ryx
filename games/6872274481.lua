@@ -35392,7 +35392,7 @@ run(function()
                             local selfpos = entitylib.character.RootPart.Position
                             local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
                             if tick() > switchCooldown and Mode.Value == 'Switch' then
-    							switchCooldown = tick() + 0.4
+    							switchCooldown = tick() + 0.17
     							targetIndex += 1
     						end
                             if not plrs[targetIndex] then
@@ -35416,7 +35416,7 @@ run(function()
                                     Attacking = true
                                     store.KillauraTarget = v
                                     if not Swing.Enabled and AnimDelay < tick() and not LegitAura.Enabled then
-                                        AnimDelay = tick() + math.max(SwingTime.Value, 0.11)
+                                        AnimDelay = tick() + math.max(SwingTime.Value, 0.08)
                                         lastSwing = tick()
                                         bedwars.SwordController:playSwordEffect(meta, false)
                                         if meta.displayName:find(' Scythe') then
