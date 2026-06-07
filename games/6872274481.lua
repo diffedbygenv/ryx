@@ -12,7 +12,7 @@ pcall(function()
 	t.Size = UDim2.new(1, 0, 0, 50)
 	t.Position = UDim2.new(0, 0, 0.5, -25)
 	t.BackgroundTransparency = 1
-	t.Text = "Loading Fuzzynuts..."
+	t.Text = "Loading Ryx"
 	t.TextColor3 = Color3.fromRGB(200, 200, 200)
 	t.TextScaled = true
 	t.Font = Enum.Font.SourceSansBold
