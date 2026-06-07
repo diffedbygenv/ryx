@@ -35046,7 +35046,7 @@ run(function()
     
     							local unit = lplr:GetMouse().UnitRay
     							local localPos = entitylib.character.RootPart.Position
-    							local rayRange = (attackRange or 14.4)
+    							local rayRange = (attackRange or 14.9)
     							local ray = workspace:Raycast(unit.Origin, unit.Direction * 200, rayParams)
     							if ray and (localPos - ray.Instance.Position).Magnitude <= rayRange then
     								for _, ent in entitylib.List do
@@ -35416,7 +35416,7 @@ run(function()
                                     Attacking = true
                                     store.KillauraTarget = v
                                     if not Swing.Enabled and AnimDelay < tick() and not LegitAura.Enabled then
-                                        AnimDelay = tick() + math.max(SwingTime.Value, 0.08)
+                                        AnimDelay = tick() + math.max(SwingTime.Value, 0.12)
                                         lastSwing = tick()
                                         bedwars.SwordController:playSwordEffect(meta, false)
                                         if meta.displayName:find(' Scythe') then
@@ -35535,7 +35535,7 @@ run(function()
                             end
                         else
                             if (tick() - lastSwing) < Continue:GetRandomValue() and not Swing.Enabled and not LegitAura.Enabled and AnimDelay < tick() then
-                                AnimDelay = tick() + math.max(SwingTime.Value, 0.08)
+                                AnimDelay = tick() + math.max(SwingTime.Value, 0.11)
                                 if vape.ThreadFix then
     								setthreadidentity(8)
     							end
