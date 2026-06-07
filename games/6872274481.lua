@@ -35321,8 +35321,8 @@ run(function()
         local currentTime = tick()
         local delayBetweenAttacks
         if delta > 20 then delayBetweenAttacks = 0.38
-        elseif delta > 18 then delayBetweenAttacks = 0.18
-        elseif delta > 14.4 then delayBetweenAttacks = 0.09
+        elseif delta > 18 then delayBetweenAttacks = 0.14
+        elseif delta > 14.4 then delayBetweenAttacks = 0.05
         elseif delta > 10 then delayBetweenAttacks = 0.04
         else delayBetweenAttacks = 0 end
         local elapsed = currentTime - lastOptimizedAttackTime
@@ -35338,7 +35338,7 @@ run(function()
         if not CustomHitRegSlider then return true end
         if CustomHitRegSlider.Value >= 45 then return true end
         local currentTime = tick()
-        local delayBetweenHits = 10 / CustomHitRegSlider.Value
+        local delayBetweenHits = 9 / CustomHitRegSlider.Value
         if currentTime - lastCustomHitTime >= delayBetweenHits then
             lastCustomHitTime = lastCustomHitTime + delayBetweenHits
             if currentTime - lastCustomHitTime > delayBetweenHits then
@@ -36127,7 +36127,7 @@ run(function()
                                     end
                                 end
                                 local currentSwingSpeed = SwingTime and SwingTime.Enabled and SwingTimeSlider.Value or (meta.sword and meta.sword.respectAttackSpeedForEffects and meta.sword.attackSpeed or 0.42)
-                                if not (SyncHits and SyncHits.Enabled) or (tick() - swingCooldown) >= math.max(currentSwingSpeed, 0.05) then
+                                if not (SyncHits and SyncHits.Enabled) or (tick() - swingCooldown) >= math.max(currentSwingSpeed, 0.03) then
                                     swingCooldown = tick()
                                 end
                             end
