@@ -5825,7 +5825,7 @@ run(function()
         end
     })
     AngleSlider = Killaura:CreateSlider({Name = 'Max angle', Min = 1, Max = 360, Default = 360})
-    UpdateRate = Killaura:CreateSlider({Name = 'Update rate', Min = 1, Max = 120, Default = 60, Suffix = 'hz'})
+    UpdateRate = Killaura:CreateSlider({Name = 'Update rate', Min = 1, Max = 450, Default = 400, Suffix = 'hz'})
     MaxTargets = Killaura:CreateSlider({Name = 'Max targets', Min = 1, Max = 5, Default = 5})
     Sort = Killaura:CreateDropdown({Name = 'Target Mode', List = methods})
     Mouse = Killaura:CreateToggle({
