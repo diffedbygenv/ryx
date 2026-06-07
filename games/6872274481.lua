@@ -35392,7 +35392,7 @@ run(function()
                             local selfpos = entitylib.character.RootPart.Position
                             local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
                             if tick() > switchCooldown and Mode.Value == 'Switch' then
-    							switchCooldown = tick() + 0.7
+    							switchCooldown = tick() + 0.4
     							targetIndex += 1
     						end
                             if not plrs[targetIndex] then
@@ -35434,7 +35434,7 @@ run(function()
                                 local actualRoot = v.Character.PrimaryPart
                                 if actualRoot and (not Sync.Enabled or (tick() - swingCooldown >= SwingTime.Value)) and (v.Humanoid.FloorMaterial ~= Enum.Material.Air or math.random(1, 100) < AirChance.Value) then
                                     local current, delay = tick(), 10 / math.max(Hitreg.Value, 1)
-                                    if Hitreg.Value >= 36 or (current - lastHit) >= delay then
+                                    if Hitreg.Value >= 45 or (current - lastHit) >= delay then
                                         lastHit += delay
                                         if current - lastHit > delay then
                                             lastHit = current
@@ -35535,7 +35535,7 @@ run(function()
                             end
                         else
                             if (tick() - lastSwing) < Continue:GetRandomValue() and not Swing.Enabled and not LegitAura.Enabled and AnimDelay < tick() then
-                                AnimDelay = tick() + math.max(SwingTime.Value, 0.11)
+                                AnimDelay = tick() + math.max(SwingTime.Value, 0.08)
                                 if vape.ThreadFix then
     								setthreadidentity(8)
     							end
@@ -35638,7 +35638,7 @@ run(function()
     SwingRange = Killaura:CreateSlider({
         Name = 'Swing range',
         Min = 1,
-        Max = 28,
+        Max = 30,
         Default = 28,
         Suffix = function(val)
             return val == 1 and 'stud' or 'studs'
@@ -35671,7 +35671,7 @@ run(function()
         Min = 0,
         Max = 2,
         Decimal = 100,
-        Default = 0.11,
+        Default = 0,
         Suffix = 'seconds'
     })
     --[[Sync = Killaura:CreateToggle({
@@ -35682,15 +35682,15 @@ run(function()
     Hitreg = Killaura:CreateSlider({
         Name = 'Hitreg',
         Min = 1,
-        Max = 36,
-        Default = 36,
+        Max = 45,
+        Default = 45,
         Suffix = 'reg'
     })
     UpdateRate = Killaura:CreateSlider({
         Name = 'Update rate',
         Min = 1,
-        Max = 120,
-        Default = 60,
+        Max = 450,
+        Default = 450,
         Suffix = 'hz'
     })
     FastHits = Killaura:CreateToggle({
