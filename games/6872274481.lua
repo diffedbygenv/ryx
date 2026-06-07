@@ -35416,7 +35416,7 @@ run(function()
                                     Attacking = true
                                     store.KillauraTarget = v
                                     if not Swing.Enabled and AnimDelay < tick() and not LegitAura.Enabled then
-                                        AnimDelay = tick() + math.max(SwingTime.Value, 0.12)
+                                        AnimDelay = tick() + math.max(SwingTime.Value, 0.14)
                                         lastSwing = tick()
                                         bedwars.SwordController:playSwordEffect(meta, false)
                                         if meta.displayName:find(' Scythe') then
@@ -35535,7 +35535,7 @@ run(function()
                             end
                         else
                             if (tick() - lastSwing) < Continue:GetRandomValue() and not Swing.Enabled and not LegitAura.Enabled and AnimDelay < tick() then
-                                AnimDelay = tick() + math.max(SwingTime.Value, 0.11)
+                                AnimDelay = tick() + math.max(SwingTime.Value, 0.13)
                                 if vape.ThreadFix then
     								setthreadidentity(8)
     							end
