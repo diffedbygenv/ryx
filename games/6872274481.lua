@@ -44,9 +44,9 @@ pcall(function()
 	run = function(func)
 		local ok, err = xpcall(func, debug.traceback)
 		if not ok then
-			warn('[SKIDV7] module failed to load: ' .. tostring(err))
+			warn('[ryx] module failed to load: ' .. tostring(err))
 			pcall(function()
-				vape:CreateNotification('Fuzzynuts', 'Module error: ' .. tostring(err):match('(.+)\n') or tostring(err), 10, 'alert')
+				vape:CreateNotification('ryx', 'Module error: ' .. tostring(err):match('(.+)\n') or tostring(err), 10, 'alert')
 			end)
 		end
 	end
