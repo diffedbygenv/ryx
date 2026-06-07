@@ -205,15 +205,15 @@ if not guiFunc then
 		end
 		context = '\n\nContext:\n' .. table.concat(parts, '\n')
 	end
-	error('[Fuzzynuts] syntax error in ' .. gui .. '.lua' .. '\n' .. errMsg .. context)
+	error('[ryx] syntax error in ' .. gui .. '.lua' .. '\n' .. errMsg .. context)
 end
 vape = guiFunc()
 if not vape then
-	error('[Fuzzynuts] GUI returned nil file may be corrupted try deleting newvape/guis/' .. gui .. '.lua and reinjecting.')
+	error('[ryx] GUI returned nil file may be corrupted try deleting newvape/guis/' .. gui .. '.lua and reinjecting.')
 end
 if not vape.Load then
 	if delfile then pcall(function() delfile('newvape/guis/' .. gui .. '.lua') end) end
-	error('[Fuzzynuts] gui file corrupted (missing load) reinject..')
+	error('[ryx] gui file corrupted (missing load) reinject..')
 end
 shared.vape = vape
 task.wait(0.1)
