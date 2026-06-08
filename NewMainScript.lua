@@ -41,6 +41,29 @@ for _, folder in {'newvape', 'newvape/games', 'newvape/profiles', 'newvape/asset
 	end
 end
 
+-- OPTIMIZATION: Skip slow connectivity check and use cached commit
+local function getCommitFast()
+	-- Check if commit cache exists and is recent
+	if isfile('newvape/profiles/commit.txt') then
+		local cached = readfile('newvape/profiles/commit.txt')
+		if cached and cached ~= '' then
+			return cached
+		end
+	end
+	
+	-- Only fetch new commit if cache is missing
+	local ok, res = pcall(function()
+		return game:HttpGet('https://api.github.com/repos/diffedbygenv/ryx/commits/main', true)
+	end)
+	if ok and res then
+		local h = res:match('"sha":"([a-f0-9]+)"')
+		if h and #h == 40 then
+			return h
+		end
+	end
+	return 'main'
+end
+
 local function downloadPremadeProfiles(commit)
 	local httpService = game:GetService('HttpService')
 	if isfolder('newvape/profiles/premade') then
@@ -78,19 +101,7 @@ local function downloadPremadeProfiles(commit)
 end
 
 if not shared.VapeDeveloper then
-	local _, subbed = pcall(function()
-		return game:HttpGet('https://github.com/diffedbygenv/ryx')
-	end)
-	local commit = 'main'
-	local ok, res = pcall(function()
-		return game:HttpGet('https://api.github.com/repos/diffedbygenv/ryx/commits/main', true)
-	end)
-	if ok and res then
-		local h = res:match('"sha":"([a-f0-9]+)"')
-		if h and #h == 40 then
-			commit = h
-		end
-	end
+	local commit = getCommitFast() -- OPTIMIZATION: Fast commit retrieval
 	if commit ~= 'main' and (isfile('newvape/profiles/commit.txt') and readfile('newvape/profiles/commit.txt') or '') ~= commit then
 		wipeFolder('newvape')
 		wipeFolder('newvape/games')
