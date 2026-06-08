@@ -35298,7 +35298,7 @@ run(function()
         local optimizedTargetPos = targetpos - (direction * targetPull) + Vector3.new(0, 1.2, 0)
         local camToTarget = (targetpos - cameraPosition).Unit
         local camPush
-        if delta > 22 then camPush = 2.2
+        if delta > 20 then camPush = 2.2
         elseif delta > 18 then camPush = 1.8
         elseif delta > 14.4 then camPush = 1.4
         elseif delta > 10 then camPush = 0.9
@@ -35306,7 +35306,7 @@ run(function()
         local optimizedCameraPos = cameraPosition + (camToTarget * camPush) + Vector3.new(0, 0.4, 0)
         local optimizedCamToTarget = (optimizedTargetPos - optimizedCameraPos).Unit
         local blendFactor
-        if delta > 22 then blendFactor = 0.945
+        if delta > 20 then blendFactor = 0.945
         elseif delta > 18 then blendFactor = 0.75
         elseif delta > 14.4 then blendFactor = 0.55
         elseif delta > 10 then blendFactor = 0.35
@@ -35321,8 +35321,8 @@ run(function()
         local currentTime = tick()
         local delayBetweenAttacks
         if delta > 20 then delayBetweenAttacks = 0.38
-        elseif delta > 18 then delayBetweenAttacks = 0.14
-        elseif delta > 14.4 then delayBetweenAttacks = 0.05
+        elseif delta > 18 then delayBetweenAttacks = 0.18
+        elseif delta > 14.4 then delayBetweenAttacks = 0.09
         elseif delta > 10 then delayBetweenAttacks = 0.04
         else delayBetweenAttacks = 0 end
         local elapsed = currentTime - lastOptimizedAttackTime
@@ -35336,9 +35336,9 @@ run(function()
     local function canHitWithCustomReg()
         if not CustomHitReg or not CustomHitReg.Enabled then return true end
         if not CustomHitRegSlider then return true end
-        if CustomHitRegSlider.Value >= 45 then return true end
+        if CustomHitRegSlider.Value >= 36 then return true end
         local currentTime = tick()
-        local delayBetweenHits = 9 / CustomHitRegSlider.Value
+        local delayBetweenHits = 10 / CustomHitRegSlider.Value
         if currentTime - lastCustomHitTime >= delayBetweenHits then
             lastCustomHitTime = lastCustomHitTime + delayBetweenHits
             if currentTime - lastCustomHitTime > delayBetweenHits then
@@ -36081,7 +36081,7 @@ run(function()
                                     lastSwingServerTimeDelta = _serverNow - lastSwingServerTime
                                     lastSwingServerTime = _serverNow
                                     store.attackReach = (delta.Magnitude * 100) // 1 / 100
-                                    store.attackReachUpdate = tick() + 1
+                                    store.attackReachUpdate = tick() + 1.3
                                     lastAttackTime = tick()
 
                                     if delta.Magnitude < 14.4 and SwingTime and SwingTime.Enabled and SwingTimeSlider.Value > 0.11 then
@@ -36127,7 +36127,7 @@ run(function()
                                     end
                                 end
                                 local currentSwingSpeed = SwingTime and SwingTime.Enabled and SwingTimeSlider.Value or (meta.sword and meta.sword.respectAttackSpeedForEffects and meta.sword.attackSpeed or 0.42)
-                                if not (SyncHits and SyncHits.Enabled) or (tick() - swingCooldown) >= math.max(currentSwingSpeed, 0.03) then
+                                if not (SyncHits and SyncHits.Enabled) or (tick() - swingCooldown) >= math.max(currentSwingSpeed, 0.05) then
                                     swingCooldown = tick()
                                 end
                             end
@@ -36221,8 +36221,8 @@ run(function()
     AttackRange = Killaura:CreateSlider({
         Name = 'Attack range',
         Min = 1,
-        Max = 28,
-        Default = 22,
+        Max = 30,
+        Default = 28,
         Suffix = function(val) return val == 1 and 'stud' or 'studs' end
     })
     RangeCircle = Killaura:CreateToggle({
@@ -36281,7 +36281,7 @@ run(function()
         Name = 'Swing Duration',
         Min = 0,
         Max = 5,
-        Default = 1,
+        Default = 0,
         Decimal = 10,
         Suffix = 's',
         Visible = false
@@ -36301,8 +36301,8 @@ run(function()
     CustomHitRegSlider = Killaura:CreateSlider({
         Name = 'Hits Per Second',
         Min = 1,
-        Max = 36,
-        Default = 30,
+        Max = 45,
+        Default = 45,
         Tooltip = 'Maximum hits per second',
         Visible = false
     })
