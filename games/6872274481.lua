@@ -36081,10 +36081,10 @@ run(function()
                                     lastSwingServerTimeDelta = _serverNow - lastSwingServerTime
                                     lastSwingServerTime = _serverNow
                                     store.attackReach = (delta.Magnitude * 100) // 1 / 100
-                                    store.attackReachUpdate = tick() + 1.3
+                                    store.attackReachUpdate = tick() + 1
                                     lastAttackTime = tick()
 
-                                    if delta.Magnitude < 14.4 and SwingTime and SwingTime.Enabled and SwingTimeSlider.Value > 0.11 then
+                                    if delta.Magnitude < 14.5 and SwingTime and SwingTime.Enabled and SwingTimeSlider.Value > 0.11 then
                                         AnimDelay = tick()
                                     end
 
