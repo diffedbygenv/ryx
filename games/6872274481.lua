@@ -35333,15 +35333,23 @@ run(function()
         return false
     end
 
-    local function canHitWithCustomReg()
+        local function canHitWithCustomReg()
         if not CustomHitReg or not CustomHitReg.Enabled then return true end
         if not CustomHitRegSlider then return true end
-        if CustomHitRegSlider.Value >= 36 then return true end
+        local targetHps = CustomHitRegSlider.Value
+        if targetHps >= 36 then return true end
+        
         local currentTime = tick()
-        local delayBetweenHits = 10 / CustomHitRegSlider.Value
+        local serverTime = workspace:GetServerTimeNow()
+        local delayBetweenHits = 1 / (targetHps * 0.98)  -- slight buffer for patch
+        
+        -- Improved timing with server time sync + drift correction
         if currentTime - lastCustomHitTime >= delayBetweenHits then
-            lastCustomHitTime = lastCustomHitTime + delayBetweenHits
-            if currentTime - lastCustomHitTime > delayBetweenHits then
+            local idealTime = lastCustomHitTime + delayBetweenHits
+            lastCustomHitTime = idealTime
+            
+            -- Drift correction to prevent falling behind
+            if currentTime - idealTime > delayBetweenHits * 1.5 then
                 lastCustomHitTime = currentTime
             end
             return true
@@ -35354,6 +35362,7 @@ run(function()
     local function FireAttackRemote(attackTable)
         if not AttackRemote then return end
         if not canHitWithCustomReg() then return end
+        
         local _atkPlr = playersService:GetPlayerFromCharacter(attackTable.entityInstance)
         if _atkPlr then
             local targetTier = getAccountTier(_atkPlr)
@@ -35364,16 +35373,17 @@ run(function()
                 if _t4LastHit[uid] and now - _t4LastHit[uid] < (10/32) then return end
                 _t4LastHit[uid] = now
             end
-            -- whitelist removed
         end
+        
         if DynamicReach and DynamicReach.Enabled then
-            if not getOptimizedAttackTiming((attackTable.validate.selfPosition.value - attackTable.validate.targetPosition.value).Magnitude) then
+            local delta = (attackTable.validate.selfPosition.value - attackTable.validate.targetPosition.value).Magnitude
+            if not getOptimizedAttackTiming(delta) then
                 return
             end
             local ns, nt, nc, ncu = optimizeHitData(
                 attackTable.validate.selfPosition.value,
                 attackTable.validate.targetPosition.value,
-                (attackTable.validate.selfPosition.value - attackTable.validate.targetPosition.value).Magnitude,
+                delta,
                 attackTable.validate.raycast.cameraPosition.value,
                 attackTable.validate.raycast.cursorDirection.value
             )
