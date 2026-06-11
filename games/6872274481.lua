@@ -35363,7 +35363,7 @@ run(function()
                             end
     
                             if not started then
-                                task.wait(0.7 / UpdateRate.Value)
+                                task.wait()
                             end
                         until (not Killaura.Enabled) or (not Animation.Enabled)
                     end)
@@ -35392,7 +35392,7 @@ run(function()
                             local selfpos = entitylib.character.RootPart.Position
                             local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
                             if tick() > switchCooldown and Mode.Value == 'Switch' then
-    							switchCooldown = tick() + 0.5
+    							switchCooldown = tick() + 0.7
     							targetIndex += 1
     						end
                             if not plrs[targetIndex] then
@@ -35433,12 +35433,8 @@ run(function()
     
                                 local actualRoot = v.Character.PrimaryPart
                                 if actualRoot and (not Sync.Enabled or (tick() - swingCooldown >= SwingTime.Value)) and (v.Humanoid.FloorMaterial ~= Enum.Material.Air or math.random(1, 100) < AirChance.Value) then
-                                    local current, delay = tick(), 10 / math.max(Hitreg.Value, 2)
-                                    if Hitreg.Value >= 36 or (current - lastHit) >= delay then
-                                        lastHit += delay
-                                        if current - lastHit > delay then
-                                            lastHit = current
-                                        end
+                                    if UpdateRate.Value >= 240 or (tick() - lastHit) >= (1 / UpdateRate.Value) then
+                                        lastHit = tick()
     
                                         local dir = CFrame.lookAt(selfpos, actualRoot.Position).LookVector
                                         local pos = selfpos + dir * math.max(delta.Magnitude - 14.4, 0)
@@ -35581,7 +35577,7 @@ run(function()
                         entitylib.character.RootPart.CFrame = CFrame.lookAt(entitylib.character.RootPart.Position, Vector3.new(vec.X, entitylib.character.RootPart.Position.Y + 0.001, vec.Z))
                     end
     
-                    task.wait(1 / UpdateRate.Value)
+                    task.wait()
                 until not Killaura.Enabled
             else
                 store.KillauraTarget = nil
@@ -35638,8 +35634,8 @@ run(function()
     SwingRange = Killaura:CreateSlider({
         Name = 'Swing range',
         Min = 1,
-        Max = 40,
-        Default = 30,
+        Max = 28,
+        Default = 28,
         Suffix = function(val)
             return val == 1 and 'stud' or 'studs'
         end
@@ -35647,8 +35643,8 @@ run(function()
     AttackRange = Killaura:CreateSlider({
         Name = 'Attack range',
         Min = 1,
-        Max = 30,
-        Default = 28,
+        Max = 20,
+        Default = 20,
         Suffix = function(val)
             return val == 1 and 'stud' or 'studs'
         end
@@ -35679,18 +35675,18 @@ run(function()
         Darker = true,
         Tooltip = 'Syncs the swing time with hitreg'
     })]]
-    Hitreg = Killaura:CreateSlider({
+    --[[Hitreg = Killaura:CreateSlider({
         Name = 'Hitreg',
         Min = 1,
         Max = 36,
         Default = 36,
         Suffix = 'reg'
-    })
+    })]]
     UpdateRate = Killaura:CreateSlider({
         Name = 'Update rate',
         Min = 1,
-        Max = 360,
-        Default = 370,
+        Max = 120,
+        Default = 120,
         Suffix = 'hz'
     })
     FastHits = Killaura:CreateToggle({
